@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JC's Presentations · KKday</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:    #00c2cb;
+      --teal2:   #00b8c0;
+      --teal3:   #009ba3;
+      --deep:    #006e75;
+      --yellow:  #fee600;
+      --bg:      #0a1a1b;
+      --surface: #0f2527;
+      --card:    #132e30;
+      --border:  rgba(0,194,203,0.18);
+      --text:    #e8f8f9;
+      --muted:   rgba(200,238,240,0.55);
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Verdana, 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% 20%, rgba(0,194,203,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 80%, rgba(0,155,163,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 60% at 50% 50%, rgba(254,230,0,0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,194,203,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,194,203,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 60px 32px 100px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+
+    .logo-img {
+      height: 44px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 12px rgba(0,194,203,0.4));
+    }
+
+    .header-divider { width: 1px; height: 36px; background: var(--border); }
+
+    .header-label {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hero { margin-bottom: 56px; }
+
+    .hero h1 {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .hero h1 em { color: var(--yellow); font-style: normal; }
+
+    .hero p {
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.7;
+    }
+
+    .count-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0,194,203,0.12);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 12px;
+      color: var(--teal);
+      margin-bottom: 14px;
+    }
+
+    .count-badge .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--teal);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 24px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,194,203,0.3);
+      border-color: rgba(0,194,203,0.35);
+    }
+
+    .card:hover .card-arrow { transform: translate(3px, -3px); opacity: 1; }
+
+    /* ── Lock indicator on protected cards ── */
+    .card[data-pw] .card-thumb::before {
+      content: '🔒';
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      z-index: 3;
+      font-size: 15px;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+    }
+
+    .card-thumb {
+      height: 130px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-thumb::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.35) 100%);
+    }
+
+    .card-body {
+      padding: 20px 22px 22px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+
+    .tag-teal   { background: rgba(0,194,203,0.15); color: var(--teal); }
+    .tag-yellow { background: rgba(254,230,0,0.12);  color: var(--yellow); }
+    .tag-green  { background: rgba(16,185,129,0.15); color: #10b981; }
+    .tag-lock   { background: rgba(254,230,0,0.10);  color: var(--yellow); }
+
+    .card-date { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    .card-title { font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--text); }
+
+    .card-desc { font-size: 12px; color: var(--muted); line-height: 1.6; flex: 1; }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .card-venue { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+
+    .card-arrow {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(0,194,203,0.12);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      opacity: 0.6;
+      transition: transform 0.22s ease, opacity 0.22s ease;
+      flex-shrink: 0;
+    }
+
+    .badge-new {
+      position: absolute;
+      top: 12px; right: 12px;
+      background: var(--yellow);
+      color: #1a1a1a;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 20px;
+      z-index: 2;
+    }
+
+    footer {
+      margin-top: 72px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(200,238,240,0.3);
+    }
+
+    footer span { color: var(--teal); }
+
+    /* ══════════════════════════════════════════
+       PASSWORD MODAL
+    ══════════════════════════════════════════ */
+    #pw-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    #pw-backdrop.open { display: flex; }
+
+    #pw-modal {
+      background: var(--card);
+      border: 1px solid rgba(0,194,203,0.3);
+      border-radius: 20px;
+      padding: 40px 44px 36px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,194,203,0.1);
+      animation: modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.92) translateY(12px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .pw-icon {
+      font-size: 32px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .pw-title {
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .pw-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    #pw-input {
+      width: 100%;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 15px;
+      color: var(--text);
+      font-family: inherit;
+      letter-spacing: 0.12em;
+      outline: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+      margin-bottom: 12px;
+    }
+
+    #pw-input:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(0,194,203,0.15);
+    }
+
+    #pw-input.shake {
+      animation: shake 0.35s ease;
+      border-color: #f87171;
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-8px); }
+      40%      { transform: translateX(8px); }
+      60%      { transform: translateX(-5px); }
+      80%      { transform: translateX(5px); }
+    }
+
+    #pw-error {
+      font-size: 12px;
+      color: #f87171;
+      text-align: center;
+      min-height: 18px;
+      margin-bottom: 10px;
+      transition: opacity 0.2s;
+    }
+
+    #pw-submit {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--teal) 0%, var(--teal3) 100%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    #pw-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+    #pw-submit:active { transform: translateY(0); }
+
+    #pw-cancel {
+      display: block;
+      margin: 14px auto 0;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.15s;
+    }
+
+    #pw-cancel:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <img src="KKday_Logo_WhiteOnTransparent.png" alt="KKday" class="logo-img">
+    <div class="header-divider"></div>
+    <div class="header-label">Presentations</div>
+  </header>
+
+  <div class="hero">
+    <div class="count-badge">
+      <span class="dot"></span>
+      <span id="deck-count">2 decks</span>
+    </div>
+    <h1>JC's<br><em>Presentation</em> List</h1>
+    <p>All KKday presentations in one place. Click any card to open the slide deck.</p>
+  </div>
+
+  <div class="section-label">Slide Decks</div>
+  <div class="grid" id="grid">
+
+    <!-- ─────────────────────────────────────────
+         PROTECTED CARD example: data-pw = SHA-256 of your password
+         Current password: kkday2026
+         To change: run in browser console →
+           crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
+             .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+    ───────────────────────────────────────────── -->
+    <a class="card" href="busan-2026.html"
+       data-pw="1b42127e77dca38098f24f0f5ddaf39e8e034b4d9c5962ebb95df704c8322886">
+      <div class="badge-new">New</div>
+      <div class="card-thumb" style="background: linear-gradient(135deg, #009ba3 0%, #006e75 100%);">
+        🌊
+      </div>
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="tag tag-teal">Business</span>
+          <span class="tag tag-yellow">2026</span>
+          <span class="tag tag-lock">🔒 Protected</span>
+          <span class="card-date">Mar 2026</span>
+        </div>
+        <div class="card-title">2026 KKday Busan Business Update</div>
+        <div class="card-desc">부산 시설사 및 관공서 대상 KKday 비즈니스 업데이트. 2022–2025 성과 리뷰 및 2026 전략.</div>
+        <div class="card-footer">
+          <div class="card-venue">📍 Busan, Korea</div>
+          <div class="card-arrow">↗</div>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="busan-event.html"
+       data-pw="1b42127e77dca38098f24f0f5ddaf39e8e034b4d9c5962ebb95df704c8322886">
+      <div class="badge-new">Latest</div>
+      <div class="card-thumb" style="background: linear-gradient(135deg, #00b8c0 0%, #009ba3 60%, #006e75 100%);">
+        🌊
+      </div>
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="tag tag-teal">Event</span>
+          <span class="tag tag-yellow">2026</span>
+          <span class="tag tag-lock">🔒 Protected</span>
+          <span class="card-date">Mar 26, 2026</span>
+        </div>
+        <div class="card-title">2026 KKday Poolside Evening</div>
+        <div class="card-desc">Partner appreciation evening at Lotte Hotel Busan — Aqua Haven. 60 guests, 4 partner awards, lucky draw.</div>
+        <div class="card-footer">
+          <div class="card-venue">📍 Busan, Korea</div>
+          <div class="card-arrow">↗</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Unprotected card — no data-pw attribute -->
+    <a class="card" href="arex-2025.html">
+      <div class="card-thumb" style="background: linear-gradient(135deg, #00c2cb 0%, #00b8c0 50%, #009ba3 100%);">
+        🚆
+      </div>
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="tag tag-teal">Strategy</span>
+          <span class="tag tag-green">2025</span>
+          <span class="card-date">2025</span>
+        </div>
+        <div class="card-title">AREX Market Mix 2025</div>
+        <div class="card-desc">KKday market strategy and distribution mix analysis for the AREX partnership channel.</div>
+        <div class="card-footer">
+          <div class="card-venue">📊 Strategy Deck</div>
+          <div class="card-arrow">↗</div>
+        </div>
+      </div>
+    </a>
+
+  </div>
+
+  <footer>
+    <p>Made with <span>KKday Presentation Skill</span> · Open in any browser</p>
+  </footer>
+
+</div>
+
+<!-- ═══════════════════════════════════════
+     PASSWORD MODAL
+═══════════════════════════════════════ -->
+<div id="pw-backdrop">
+  <div id="pw-modal" role="dialog" aria-modal="true" aria-labelledby="pw-title">
+    <div class="pw-icon">🔒</div>
+    <div class="pw-title" id="pw-title">Password Required</div>
+    <div class="pw-subtitle" id="pw-subtitle">This presentation is protected.<br>Enter the password to continue.</div>
+    <input id="pw-input" type="password" placeholder="Enter password" autocomplete="off" autofocus>
+    <div id="pw-error"></div>
+    <button id="pw-submit">Unlock →</button>
+    <button id="pw-cancel">Cancel</button>
+  </div>
+</div>
+
+<script>
+  // ── Deck count ──────────────────────────────────────────
+  const count = document.querySelectorAll('.card').length;
+  document.getElementById('deck-count').textContent = count + ' deck' + (count !== 1 ? 's' : '');
+
+  // ── SHA-256 via Web Crypto ──────────────────────────────
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ── Modal state ─────────────────────────────────────────
+  const backdrop = document.getElementById('pw-backdrop');
+  const modal    = document.getElementById('pw-modal');
+  const input    = document.getElementById('pw-input');
+  const errMsg   = document.getElementById('pw-error');
+  const submitBtn= document.getElementById('pw-submit');
+  const cancelBtn= document.getElementById('pw-cancel');
+
+  let _href = '', _hash = '';
+
+  function openModal(href, hash, title) {
+    _href = href;
+    _hash = hash;
+    document.getElementById('pw-subtitle').innerHTML =
+      '<strong style="color:var(--text)">' + title + '</strong><br>Enter the password to continue.';
+    input.value = '';
+    errMsg.textContent = '';
+    input.classList.remove('shake');
+    backdrop.classList.add('open');
+    setTimeout(() => input.focus(), 60);
+  }
+
+  function closeModal() {
+    backdrop.classList.remove('open');
+    _href = ''; _hash = '';
+  }
+
+  // ── Navigate with session cache ─────────────────────────
+  function navigate(href, hash) {
+    sessionStorage.setItem('pw_ok_' + href, hash);
+    window.location.href = href;
+  }
+
+  // ── Submit password ─────────────────────────────────────
+  async function tryUnlock() {
+    const val = input.value;
+    if (!val) return;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Checking…';
+
+    const computed = await sha256(val);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Unlock →';
+
+    if (computed === _hash) {
+      navigate(_href, _hash);
+    } else {
+      errMsg.textContent = 'Wrong password. Try again.';
+      input.classList.remove('shake');
+      void input.offsetWidth; // reflow to restart animation
+      input.classList.add('shake');
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  submitBtn.addEventListener('click', tryUnlock);
+  cancelBtn.addEventListener('click', closeModal);
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryUnlock();
+    if (e.key === 'Escape') closeModal();
+  });
+
+  backdrop.addEventListener('click', e => {
+    if (e.target === backdrop) closeModal();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && backdrop.classList.contains('open')) closeModal();
+  });
+
+  // ── Card click intercept ────────────────────────────────
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', e => {
+      e.preventDefault();
+      const href = card.getAttribute('href');
+      const hash = card.dataset.pw;
+
+      if (!hash) {
+        // No password — open directly
+        window.location.href = href;
+        return;
+      }
+
+      // Check session cache
+      if (sessionStorage.getItem('pw_ok_' + href) === hash) {
+        window.location.href = href;
+        return;
+      }
+
+      // Show modal
+      const title = card.querySelector('.card-title').textContent;
+      openModal(href, hash, title);
+    });
+  });
+</script>
+</body>
+</html>

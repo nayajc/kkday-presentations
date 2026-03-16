@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KKday · 부산 Business Update 2026</title>
+  <style>
+    /* ─── Reset ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #009ba3;
+      font-family: Verdana, 'Segoe UI', sans-serif;
+    }
+
+    /* ─── SR only ────────────────────────────────────────── */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    /* ─── Viewport ───────────────────────────────────────── */
+    #viewport { position: fixed; inset: 0; overflow: hidden; }
+
+    /* ─── Fixed 1920×1080 frame ──────────────────────────── */
+    #frame {
+      position: absolute; top: 0; left: 0;
+      width: 1920px; height: 1080px;
+      transform-origin: top left;
+    }
+
+    /* ─── Background layer ───────────────────────────────── */
+    #slide-bg {
+      position: fixed; inset: 0; z-index: 0;
+      transition: background-color 0.55s ease;
+      pointer-events: none;
+    }
+
+    /* ─── Slides ─────────────────────────────────────────── */
+    .slide {
+      position: absolute; inset: 0;
+      opacity: 0; visibility: hidden;
+      transform: translateX(100%);
+      transition: transform 0.6s cubic-bezier(0.26, 0.86, 0.44, 0.985),
+                  opacity 0.6s ease, visibility 0.6s;
+      will-change: transform, opacity;
+      display: flex; flex-direction: column;
+      padding: 72px 96px;
+      overflow: hidden;
+    }
+    .slide.past   { transform: translateX(-100%); opacity: 0; visibility: hidden; }
+    .slide.present{ transform: translateX(0);     opacity: 1; visibility: visible; }
+    .slide.future { transform: translateX(100%);  opacity: 0; visibility: hidden; }
+
+    /* ─── Logo helper classes ────────────────────────────── */
+    .kkday-logo-img { display: block; object-fit: contain; }
+    .kkday-logo-img.size-xl { height: 96px; }
+    .kkday-logo-img.size-md { height: 64px; }
+    .kkday-logo-img.size-sm { height: 48px; }
+
+    /* ─── Common header bar ──────────────────────────────── */
+    .kkday-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 48px; flex-shrink: 0;
+    }
+    .header-divider { width: 2px; height: 40px; background: rgba(255,255,255,0.4); margin: 0 24px; }
+    .header-tagline { font-size: 26px; color: rgba(255,255,255,0.85); font-weight: 700; }
+    .header-right   { font-size: 24px; color: rgba(255,255,255,0.6); letter-spacing: 1px; }
+
+    /* ─── Fragments ──────────────────────────────────────── */
+    .fragment { opacity: 0; transform: translateY(18px); animation: none; }
+    .slide.present .fragment { animation: fragmentIn 0.45s ease forwards; }
+    .slide.present [data-fragment-index="1"] { animation-delay: 0.15s; }
+    .slide.present [data-fragment-index="2"] { animation-delay: 0.35s; }
+    .slide.present [data-fragment-index="3"] { animation-delay: 0.55s; }
+    .slide.present [data-fragment-index="4"] { animation-delay: 0.75s; }
+    .slide.present [data-fragment-index="5"] { animation-delay: 0.95s; }
+    .slide.present [data-fragment-index="6"] { animation-delay: 1.15s; }
+    @keyframes fragmentIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Progress bar ───────────────────────────────────── */
+    #progress { position: fixed; bottom: 0; left: 0; z-index: 200; width: 100%; height: 5px; background: rgba(0,0,0,0.15); }
+    #progress-fill { height: 100%; background: #fee600; transform-origin: left; transform: scaleX(0); transition: transform 0.35s ease; }
+
+    /* ─── Counter ────────────────────────────────────────── */
+    #counter { position: fixed; bottom: 20px; right: 44px; z-index: 200; font-size: 22px; color: rgba(255,255,255,0.55); font-variant-numeric: tabular-nums; pointer-events: none; }
+
+    /* ─── Nav buttons ────────────────────────────────────── */
+    .nav-btn {
+      position: fixed; top: 50%; z-index: 200;
+      transform: translateY(-50%);
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(0,0,0,0.15); color: rgba(255,255,255,0.7);
+      font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-btn:hover { background: rgba(0,0,0,0.3); color: #fff; }
+    #btn-prev { left: 16px; }
+    #btn-next { right: 16px; }
+
+    /* ─── Export toolbar ─────────────────────────────────── */
+    #export-toolbar {
+      position: fixed; top: 20px; right: 20px; z-index: 300;
+      display: flex; gap: 10px;
+      opacity: 0; transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    #export-toolbar:hover,
+    body.show-toolbar #export-toolbar { opacity: 1; pointer-events: auto; }
+    .export-btn {
+      padding: 8px 20px; border-radius: 8px;
+      border: 1.5px solid rgba(255,255,255,0.4);
+      background: rgba(0,0,0,0.3); color: rgba(255,255,255,0.9);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: background 0.2s, color 0.2s;
+    }
+    .export-btn:hover { background: rgba(0,0,0,0.55); color: #fff; }
+    .export-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ─── Help hint ──────────────────────────────────────── */
+    #help-hint { position: fixed; bottom: 20px; left: 44px; z-index: 200; font-size: 18px; color: rgba(255,255,255,0.35); pointer-events: none; }
+
+    /* ─── Help modal ─────────────────────────────────────── */
+    #help-modal { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; }
+    #help-modal[hidden] { display: none; }
+    .modal-box { background: #fff; border-radius: 20px; padding: 52px 60px; color: #1a1a1a; max-width: 560px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+    .modal-box h2 { font-size: 30px; margin-bottom: 28px; color: #00c2cb; }
+    .modal-box table { border-collapse: collapse; width: 100%; }
+    .modal-box td { padding: 10px 0; font-size: 18px; color: #333; vertical-align: middle; }
+    .modal-box td:first-child { color: #00c2cb; width: 54%; font-weight: 600; }
+    kbd { background: #f0fafb; border: 1px solid #c0e8ea; border-radius: 4px; padding: 2px 8px; font-size: 14px; font-family: monospace; color: #00a0a8; }
+    .modal-close { margin-top: 32px; width: 100%; padding: 14px; background: #00c2cb; color: #fff; border: none; border-radius: 10px; font-size: 18px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+    .modal-close:hover { background: #00a8b0; }
+
+    /* ─── Force backgrounds to print ────────────────────── */
+    *, *::before, *::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    /* ─── Notes always hidden ────────────────────────────── */
+    aside.notes { display: none; }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT: TITLE
+    ═══════════════════════════════════════════════════════ */
+    .layout-title { align-items: center; justify-content: center; text-align: center; }
+    .layout-title .eyebrow { font-size: 26px; letter-spacing: 4px; text-transform: uppercase; color: rgba(255,255,255,0.7); margin-bottom: 28px; font-weight: 500; }
+    .layout-title h1 { font-size: 96px; font-weight: 900; line-height: 1.05; color: #fff; letter-spacing: -2px; margin-bottom: 20px; }
+    .layout-title h1 em { color: #fee600; font-style: normal; }
+    .layout-title .sub { font-size: 34px; color: rgba(255,255,255,0.75); font-weight: 400; margin-bottom: 48px; }
+    .meta-row { display: flex; gap: 40px; align-items: center; justify-content: center; flex-wrap: wrap; }
+    .meta-pill { background: rgba(0,0,0,0.18); border-radius: 100px; padding: 14px 36px; font-size: 26px; font-weight: 700; color: #fff; }
+    .meta-pill.yellow { background: #fee600; color: #1a1a1a; }
+
+    /* Section divider title (simpler) */
+    .layout-section { align-items: center; justify-content: center; text-align: center; }
+    .layout-section .part-num { font-size: 22px; letter-spacing: 6px; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 24px; font-weight: 600; }
+    .layout-section .part-icon { font-size: 80px; margin-bottom: 32px; }
+    .layout-section h2 { font-size: 84px; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 24px; }
+    .layout-section h2 em { color: #fee600; font-style: normal; }
+    .layout-section .part-sub { font-size: 30px; color: rgba(255,255,255,0.65); }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT: TWO-COLUMN
+    ═══════════════════════════════════════════════════════ */
+    .layout-two-col .content-area { display: flex; flex: 1; gap: 80px; align-items: center; }
+    .layout-two-col .left-side { flex: 0 0 620px; display: flex; flex-direction: column; align-items: center; }
+    .layout-two-col .right-side { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+
+    .insight-card { background: rgba(0,0,0,0.15); border-radius: 18px; padding: 36px 40px; border-left: 5px solid #fee600; }
+    .insight-card h3 { font-size: 32px; font-weight: 800; color: #fee600; margin-bottom: 10px; }
+    .insight-card p  { font-size: 26px; color: rgba(255,255,255,0.85); line-height: 1.55; }
+    .insight-card .big-num { font-size: 72px; font-weight: 900; color: #fff; line-height: 1; }
+    .insight-card .big-num em { color: #fee600; font-style: normal; }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT: STATS
+    ═══════════════════════════════════════════════════════ */
+    .layout-stats { align-items: center; text-align: center; }
+    .layout-stats h2 { font-size: 60px; font-weight: 900; color: #fff; margin-bottom: 52px; }
+    .layout-stats h2 em { color: #fee600; font-style: normal; }
+    .stats-row { display: flex; gap: 40px; width: 100%; }
+    .stat-box { flex: 1; background: rgba(0,0,0,0.15); border-radius: 20px; padding: 52px 36px; border-bottom: 4px solid transparent; transition: border-color 0.3s; }
+    .slide.present .stat-box.fragment { border-bottom-color: #fee600; }
+    .stat-num { font-size: 80px; font-weight: 900; color: #fee600; line-height: 1; margin-bottom: 14px; }
+    .stat-unit { font-size: 36px; font-weight: 700; color: #fff; }
+    .stat-label { font-size: 24px; color: rgba(255,255,255,0.75); margin-top: 8px; line-height: 1.4; }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT: BUNDLE (3-col)
+    ═══════════════════════════════════════════════════════ */
+    .layout-bundle .bundle-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; flex: 1; }
+    .bundle-item { background: rgba(0,0,0,0.15); border-radius: 20px; padding: 44px 36px; display: flex; flex-direction: column; gap: 18px; border-top: 4px solid rgba(255,255,255,0.4); }
+    .bundle-item.highlight { border-top-color: #fee600; background: rgba(254,230,0,0.1); }
+    .bundle-icon { font-size: 52px; }
+    .bundle-item h3 { font-size: 30px; font-weight: 800; color: #fff; line-height: 1.3; }
+    .bundle-item p  { font-size: 22px; color: rgba(255,255,255,0.75); line-height: 1.6; flex: 1; }
+    .bundle-arrow { display: inline-flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 700; color: #fee600; }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT: CARDS 2×2
+    ═══════════════════════════════════════════════════════ */
+    .layout-cards .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; flex: 1; }
+    .kk-card { background: #fff; border-radius: 20px; padding: 44px 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); display: flex; flex-direction: column; gap: 18px; }
+    .kk-card .card-badge { display: inline-flex; align-items: center; gap: 10px; background: #00c2cb; color: #fff; padding: 8px 20px; border-radius: 100px; font-size: 20px; font-weight: 700; align-self: flex-start; }
+    .kk-card h3 { font-size: 32px; font-weight: 800; color: #1a1a1a; line-height: 1.3; }
+    .kk-card p { font-size: 22px; color: #555; line-height: 1.6; flex: 1; }
+    .tag-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .tag-chip { background: #f0fafb; border: 1.5px solid #c0e8ea; color: #00a0a8; padding: 6px 18px; border-radius: 100px; font-size: 18px; font-weight: 600; }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT: CARDS 3-col
+    ═══════════════════════════════════════════════════════ */
+    .layout-cards-3 .content-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 44px; flex: 1; }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT: CATEGORIES
+    ═══════════════════════════════════════════════════════ */
+    .cat-grid { display: flex; gap: 40px; flex: 1; align-items: center; justify-content: center; }
+    .cat-item { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+    .cat-circle { width: 200px; height: 200px; border-radius: 50%; background: rgba(0,0,0,0.15); overflow: hidden; border: 4px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 80px; transition: border-color 0.25s, transform 0.25s; }
+    .slide.present .cat-item.fragment .cat-circle { border-color: #fff; transform: scale(1.04); }
+    .cat-name { font-size: 26px; font-weight: 700; color: #fff; text-align: center; line-height: 1.3; }
+    .cat-name em { color: #fee600; font-style: normal; }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT: END
+    ═══════════════════════════════════════════════════════ */
+    .layout-end { align-items: center; justify-content: center; text-align: center; }
+    .layout-end .tagline { font-size: 36px; color: rgba(255,255,255,0.8); margin-bottom: 60px; font-weight: 400; line-height: 1.5; }
+    .end-grid { display: flex; gap: 32px; margin-bottom: 60px; flex-wrap: wrap; justify-content: center; }
+    .end-pill { background: rgba(0,0,0,0.18); border-radius: 100px; padding: 18px 40px; font-size: 26px; font-weight: 700; color: #fff; border: 2px solid rgba(255,255,255,0.25); }
+    .end-pill.accent { background: #fee600; color: #1a1a1a; border-color: #fee600; }
+    .restart-btn { padding: 22px 64px; border-radius: 100px; background: rgba(0,0,0,0.2); border: 3px solid rgba(255,255,255,0.4); color: #fff; font-size: 26px; font-weight: 700; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+    .restart-btn:hover { background: rgba(0,0,0,0.35); border-color: #fff; }
+
+    /* ═══════════════════════════════════════════════════════
+       DONUT CHART HELPERS
+    ═══════════════════════════════════════════════════════ */
+    .donut-wrap { position: relative; width: 420px; height: 420px; }
+    .donut-wrap svg { width: 100%; height: 100%; }
+    .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .donut-year { font-size: 56px; font-weight: 900; color: #fff; line-height: 1; }
+    .donut-sub  { font-size: 22px; color: rgba(255,255,255,0.7); }
+    .legend-list { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+    .legend-item { display: flex; align-items: center; gap: 14px; font-size: 24px; color: #fff; font-weight: 600; }
+    .legend-dot  { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ═══════════════════════════════════════════════════════
+       BAR CHART (Slide 6)
+    ═══════════════════════════════════════════════════════ */
+    .bar-chart-wrap { display: flex; align-items: flex-end; gap: 60px; flex: 1; padding: 0 80px; justify-content: center; }
+    .bar-col { display: flex; flex-direction: column; align-items: center; gap: 0; width: 200px; }
+    .bar-fill {
+      width: 100%; border-radius: 12px 12px 0 0;
+      background: linear-gradient(180deg, rgba(254,230,0,0.9) 0%, #00c2cb 100%);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding-top: 20px;
+      transition: height 0.8s ease;
+    }
+    .bar-fill.highlight { background: linear-gradient(180deg, #fee600 0%, #00e0eb 100%); box-shadow: 0 0 40px rgba(254,230,0,0.4); }
+    .bar-value { font-size: 32px; font-weight: 900; color: #fff; }
+    .bar-base { width: 100%; height: 4px; background: rgba(255,255,255,0.3); }
+    .bar-year { font-size: 28px; font-weight: 700; color: rgba(255,255,255,0.85); margin-top: 16px; }
+    .bar-growth { font-size: 22px; color: #fee600; font-weight: 700; margin-top: 6px; }
+
+    /* ═══════════════════════════════════════════════════════
+       ABOUT KKDAY STATS (Slide 2)
+    ═══════════════════════════════════════════════════════ */
+    .about-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+    .about-stat { background: rgba(0,0,0,0.18); border-radius: 18px; padding: 36px 32px; text-align: center; }
+    .about-stat .num { font-size: 64px; font-weight: 900; color: #fee600; line-height: 1; }
+    .about-stat .lbl { font-size: 22px; color: rgba(255,255,255,0.8); margin-top: 8px; }
+
+    /* ═══════════════════════════════════════════════════════
+       SECTION LABEL PILL
+    ═══════════════════════════════════════════════════════ */
+    .section-label-pill {
+      display: inline-block;
+      background: rgba(0,0,0,0.15); border-radius: 100px;
+      padding: 8px 28px; font-size: 20px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      color: rgba(255,255,255,0.85); margin-bottom: 28px;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       PRINT / PDF
+    ═══════════════════════════════════════════════════════ */
+    @media print {
+      @page { size: 338.67mm 190.5mm; margin: 0; }
+      html, body { width: 1920px; height: auto; overflow: visible; background: transparent; }
+      #viewport { display: block; position: static; height: auto; width: 1920px; }
+      #frame { position: static !important; transform: none !important; width: 1920px !important; height: auto; }
+      .slide { position: relative !important; opacity: 1 !important; visibility: visible !important; transform: none !important; width: 1920px; height: 1080px; page-break-after: always; page-break-inside: avoid; display: flex; }
+      #slide-bg, #progress, #counter, #help-hint, .nav-btn, #help-modal, #export-toolbar, #sr-status { display: none !important; }
+      .fragment { opacity: 1 !important; transform: none !important; animation: none !important; }
+      aside.notes { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="sr-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="slide-bg" aria-hidden="true"></div>
+<div id="progress" aria-hidden="true"><div id="progress-fill"></div></div>
+<div id="counter" aria-hidden="true"><span id="cur">1</span> / <span id="tot">18</span></div>
+<div id="help-hint" aria-hidden="true">? 단축키</div>
+<button class="nav-btn" id="btn-prev" aria-label="이전 슬라이드">&#8592;</button>
+<button class="nav-btn" id="btn-next" aria-label="다음 슬라이드">&#8594;</button>
+
+<div id="export-toolbar">
+  <button class="export-btn" id="btn-pdf"  onclick="exportPDF()"  title="PDF (P)">📄 PDF</button>
+  <button class="export-btn" id="btn-pptx" onclick="exportPPTX()" title="PPTX (X)">📊 PPTX</button>
+</div>
+
+<main id="presentation" role="application" aria-roledescription="presentation" tabindex="0">
+  <div id="viewport">
+    <div id="frame">
+
+      <!-- ══ SLIDE 1 · TITLE ══════════════════════════════ -->
+      <section class="slide layout-title" id="slide-0"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 1: Title"
+               data-index="0" data-bg="#00c2cb">
+        <div style="position:absolute;top:48px;left:88px;">
+          <img class="kkday-logo-img size-xl" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+        </div>
+        <div class="eyebrow">2026 Business Update · Busan</div>
+        <h1>KKday ×<br><em>부산</em></h1>
+        <div class="sub">시설사 및 관공서 파트너 브리핑 · 2026년 3월</div>
+        <div class="meta-row fragment" data-fragment-index="1">
+          <div class="meta-pill yellow">550+ 도시</div>
+          <div class="meta-pill">XX개국 여행자</div>
+          <div class="meta-pill">누적 XXX만+ 예약</div>
+        </div>
+        <aside class="notes">타이틀 슬라이드. 부산 시설사·관공서 대상 KKday 2026 비즈니스 업데이트.</aside>
+      </section>
+
+      <!-- ══ SLIDE 2 · ABOUT KKDAY ═════════════════════════ -->
+      <section class="slide layout-two-col" id="slide-1"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 2: About KKday"
+               data-index="1" data-bg="#00b8c0"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">About KKday</span>
+          </div>
+          <span class="header-right">PART 1 · KKday 소개</span>
+        </div>
+        <div class="content-area">
+          <div class="left-side">
+            <div class="about-stats">
+              <div class="about-stat fragment" data-fragment-index="1">
+                <div class="num">2014</div>
+                <div class="lbl">설립연도</div>
+              </div>
+              <div class="about-stat fragment" data-fragment-index="2">
+                <div class="num">550+</div>
+                <div class="lbl">운영 도시</div>
+              </div>
+              <div class="about-stat fragment" data-fragment-index="3">
+                <div class="num">XXX만+</div>
+                <div class="lbl">누적 예약</div>
+              </div>
+              <div class="about-stat fragment" data-fragment-index="4">
+                <div class="num">XX+</div>
+                <div class="lbl">마켓 운영</div>
+              </div>
+            </div>
+          </div>
+          <div class="right-side">
+            <div class="insight-card fragment" data-fragment-index="1">
+              <h3>🌏 아시아 No.1 여행 액티비티 플랫폼</h3>
+              <p>일본·대만·한국·홍콩·동남아 등 아시아 전역에서 현지 투어·티켓·교통을 직접 큐레이션하여 글로벌 여행자에게 유통합니다.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="2">
+              <h3>🤝 공급자 중심 파트너십</h3>
+              <p>시설사·운영사와 직접 계약, 별도 재고 관리 없이 KKday 플랫폼을 통해 <strong style="color:#fee600;">글로벌 여행자에게 즉시 노출</strong>됩니다.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="3">
+              <h3>📍 부산 특화 운영</h3>
+              <p>부산 지역 전담 MD 운영 · 현지 파트너 지원 · 다국어 고객 서비스</p>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">KKday 플랫폼 소개. 아시아 No.1 포지셔닝 강조.</aside>
+      </section>
+
+      <!-- ══ SLIDE 3 · GLOBAL DISTRIBUTION ════════════════ -->
+      <section class="slide layout-bundle" id="slide-2"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 3: Global Distribution"
+               data-index="2" data-bg="#009ba3"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">Global Distribution Network</span>
+          </div>
+          <span class="header-right">PART 1 · KKday 소개</span>
+        </div>
+        <div style="text-align:center;margin-bottom:40px;" class="fragment" data-fragment-index="1">
+          <h2 style="font-size:60px;font-weight:900;color:#fff;">
+            더 많은 채널, 더 넓은 <em style="color:#fee600;">글로벌 노출</em>
+          </h2>
+        </div>
+        <div class="bundle-grid">
+          <div class="bundle-item fragment" data-fragment-index="2">
+            <div class="bundle-icon">🌐</div>
+            <h3>KKday.com / 앱</h3>
+            <p>자체 플랫폼 직판. 일본·대만·홍콩·동남아·한국 다국어 사이트로 여행자와 직접 연결.</p>
+            <div class="bundle-arrow">직접 판매 →</div>
+          </div>
+          <div class="bundle-item highlight fragment" data-fragment-index="3">
+            <div class="bundle-icon">🔗</div>
+            <h3>B2B API 파트너십</h3>
+            <p>Klook·Viator·GetYourGuide·Trip.com 등 글로벌 OTA API 연동으로 상품이 수십 개 플랫폼에 동시 노출됩니다.</p>
+            <div class="bundle-arrow" style="color:#fee600;">▶ 핵심 채널</div>
+          </div>
+          <div class="bundle-item fragment" data-fragment-index="4">
+            <div class="bundle-icon">🏢</div>
+            <h3>GDS / 여행사 네트워크</h3>
+            <p>글로벌 여행사·GDS 연동으로 오프라인 여행사까지 도달. 부산 상품이 전 세계 여행사 카탈로그에 포함.</p>
+            <div class="bundle-arrow">최대 유통망 →</div>
+          </div>
+        </div>
+        <aside class="notes">KKday의 글로벌 유통 채널 설명. B2B API가 핵심임을 강조.</aside>
+      </section>
+
+      <!-- ══ SLIDE 4 · CATEGORIES ══════════════════════════ -->
+      <section class="slide" id="slide-3"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 4: KKday Categories"
+               data-index="3" data-bg="#00c2cb"
+               aria-hidden="true">
+        <div class="kkday-header" style="width:100%;">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">Find all your travel needs across different types of experiences</span>
+          </div>
+          <span class="header-right">PART 1 · KKday 소개</span>
+        </div>
+        <div style="text-align:center;margin-bottom:48px;">
+          <h2 style="font-size:64px;font-weight:900;color:#fee600;line-height:1.1;">
+            Locally curated experiences<br>in <em style="color:#fff;font-style:normal;">550+</em> cities
+          </h2>
+        </div>
+        <div class="cat-grid">
+          <div class="cat-item fragment" data-fragment-index="1">
+            <div class="cat-circle">🎡</div>
+            <div class="cat-name"><em>Attractions &<br>Theme Parks</em></div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="2">
+            <div class="cat-circle">🚆</div>
+            <div class="cat-name"><em>Transportation<br>Essentials</em></div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="3">
+            <div class="cat-circle">🎈</div>
+            <div class="cat-name">Tours &<br>Activities</div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="4">
+            <div class="cat-circle">🍜</div>
+            <div class="cat-name">Food &<br>Dining</div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="5">
+            <div class="cat-circle">🎨</div>
+            <div class="cat-name">Hands-on<br>Classes</div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="6">
+            <div class="cat-circle">🌿</div>
+            <div class="cat-name">Nature &<br>Outdoor</div>
+          </div>
+        </div>
+        <aside class="notes">KKday 6개 카테고리 소개. Attractions·Transportation을 부산 연관성 강조.</aside>
+      </section>
+
+      <!-- ══ SLIDE 5 · SECTION BREAK: PART 2 ══════════════ -->
+      <section class="slide layout-section" id="slide-4"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 5: Part 2 Section"
+               data-index="4" data-bg="#009ba3"
+               aria-hidden="true">
+        <div class="part-num">PART 2</div>
+        <div class="part-icon">🌊</div>
+        <h2>부산 비즈니스<br><em>업데이트</em></h2>
+        <div class="part-sub">KKday Busan · 2022–2025 성과 리뷰</div>
+        <aside class="notes">파트 2 구분 슬라이드.</aside>
+      </section>
+
+      <!-- ══ SLIDE 6 · YoY 예약수 증가 ════════════════════ -->
+      <section class="slide" id="slide-5"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 6: YoY Bookings"
+               data-index="5" data-bg="#00b8c0"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">부산 예약수 연도별 성장</span>
+          </div>
+          <span class="header-right">PART 2 · 부산 업데이트</span>
+        </div>
+        <div style="text-align:center;margin-bottom:20px;">
+          <h2 style="font-size:58px;font-weight:900;color:#fff;">
+            매년 <em style="color:#fee600;">지속 성장</em>하는 부산 예약
+          </h2>
+        </div>
+        <div class="bar-chart-wrap">
+          <div class="bar-col fragment" data-fragment-index="1">
+            <div class="bar-fill" style="height:220px;">
+              <span class="bar-value">XX,XXX</span>
+            </div>
+            <div class="bar-base"></div>
+            <div class="bar-year">2022</div>
+            <div class="bar-growth">기준</div>
+          </div>
+          <div class="bar-col fragment" data-fragment-index="2">
+            <div class="bar-fill" style="height:308px;">
+              <span class="bar-value">XX,XXX</span>
+            </div>
+            <div class="bar-base"></div>
+            <div class="bar-year">2023</div>
+            <div class="bar-growth">+XX%</div>
+          </div>
+          <div class="bar-col fragment" data-fragment-index="3">
+            <div class="bar-fill" style="height:462px;">
+              <span class="bar-value">XX,XXX</span>
+            </div>
+            <div class="bar-base"></div>
+            <div class="bar-year">2024</div>
+            <div class="bar-growth">+XX%</div>
+          </div>
+          <div class="bar-col fragment" data-fragment-index="4">
+            <div class="bar-fill highlight" style="height:682px;">
+              <span class="bar-value">XXX,XXX</span>
+            </div>
+            <div class="bar-base"></div>
+            <div class="bar-year">2025</div>
+            <div class="bar-growth" style="font-size:28px;">+XX%↑</div>
+          </div>
+        </div>
+        <aside class="notes">22-25년 YoY 예약수 막대 차트. 2025년 최고점 강조.</aside>
+      </section>
+
+      <!-- ══ SLIDE 7 · 서울/부산 믹스 변화 ════════════════ -->
+      <section class="slide layout-two-col" id="slide-6"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 7: Seoul Busan Mix"
+               data-index="6" data-bg="#00c2cb"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">서울 / 부산 비중 변화</span>
+          </div>
+          <span class="header-right">PART 2 · 부산 업데이트</span>
+        </div>
+        <div class="content-area">
+          <div class="left-side">
+            <div style="font-size:38px;font-weight:800;color:#fee600;margin-bottom:24px;text-align:center;">부산 비중 증가 추이</div>
+            <!-- Two mini donuts: 2022 vs 2025 -->
+            <div style="display:flex;gap:40px;align-items:center;justify-content:center;">
+              <div style="text-align:center;">
+                <div style="position:relative;width:200px;height:200px;">
+                  <svg viewBox="0 0 200 200" style="width:100%;height:100%;">
+                    <circle cx="100" cy="100" r="75" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="32" stroke-dasharray="471.2 0" transform="rotate(-90 100 100)"/>
+                    <!-- 부산 XX% -->
+                    <circle cx="100" cy="100" r="75" fill="none" stroke="#fee600" stroke-width="32"
+                      stroke-dasharray="94.2 376.9" stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                    <div style="font-size:36px;font-weight:900;color:#fee600;">XX%</div>
+                    <div style="font-size:16px;color:rgba(255,255,255,0.7);">부산</div>
+                  </div>
+                </div>
+                <div style="font-size:22px;color:rgba(255,255,255,0.7);margin-top:12px;">2022</div>
+              </div>
+              <div style="font-size:52px;color:rgba(255,255,255,0.5);">→</div>
+              <div style="text-align:center;">
+                <div style="position:relative;width:200px;height:200px;">
+                  <svg viewBox="0 0 200 200" style="width:100%;height:100%;">
+                    <circle cx="100" cy="100" r="75" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="32" stroke-dasharray="471.2 0" transform="rotate(-90 100 100)"/>
+                    <!-- 부산 XX% (2025, higher) -->
+                    <circle cx="100" cy="100" r="75" fill="none" stroke="#00f5e0" stroke-width="32"
+                      stroke-dasharray="157.1 314.2" stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                    <div style="font-size:36px;font-weight:900;color:#00f5e0;">XX%</div>
+                    <div style="font-size:16px;color:rgba(255,255,255,0.7);">부산</div>
+                  </div>
+                </div>
+                <div style="font-size:22px;color:rgba(255,255,255,0.7);margin-top:12px;">2025</div>
+              </div>
+            </div>
+            <div style="margin-top:28px;display:flex;flex-direction:column;gap:12px;">
+              <div style="display:flex;align-items:center;gap:12px;font-size:22px;color:#fff;">
+                <span style="width:16px;height:16px;border-radius:50%;background:#fee600;flex-shrink:0;"></span>부산 (2022)
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;font-size:22px;color:#fff;">
+                <span style="width:16px;height:16px;border-radius:50%;background:#00f5e0;flex-shrink:0;"></span>부산 (2025)
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;font-size:22px;color:rgba(255,255,255,0.6);">
+                <span style="width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></span>서울
+              </div>
+            </div>
+          </div>
+          <div class="right-side">
+            <div class="insight-card fragment" data-fragment-index="1">
+              <h3>📈 부산 비중 꾸준한 상승</h3>
+              <div class="big-num"><em>+XX</em>%p</div>
+              <p>2022 대비 2025, 전체 한국 예약 중 부산 비중이 XX%p 증가.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="2">
+              <h3>🎯 다양화되는 여행지</h3>
+              <p>서울 집중에서 벗어나 <strong style="color:#fee600;">부산·경주·제주</strong> 등 지방 여행 수요가 글로벌 여행자 사이에서 급증하는 추세.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="3">
+              <h3>🚄 KTX 연계 당일치기 급증</h3>
+              <p>서울 출발 부산 당일 투어 상품 수요 증가. 교통-액티비티 번들 기회.</p>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">서울/부산 믹스 변화. 부산 비중 상승 추세 강조.</aside>
+      </section>
+
+      <!-- ══ SLIDE 8 · 부산 KPI ════════════════════════════ -->
+      <section class="slide layout-stats" id="slide-7"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 8: Busan KPIs"
+               data-index="7" data-bg="#009ba3"
+               aria-hidden="true">
+        <div class="kkday-header" style="width:100%;">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">부산 비즈니스 핵심 지표</span>
+          </div>
+          <span class="header-right">PART 2 · 부산 업데이트</span>
+        </div>
+        <h2>2025 부산 <em>Key Numbers</em></h2>
+        <div class="stats-row">
+          <div class="stat-box fragment" data-fragment-index="1">
+            <div class="stat-num" data-count="XXX" data-suffix="+">0</div>
+            <div class="stat-unit">부산 상품 수</div>
+            <div class="stat-label">KKday 플랫폼 내<br>부산 상품 총 라인업</div>
+          </div>
+          <div class="stat-box fragment" data-fragment-index="2">
+            <div class="stat-num" data-count="XX" data-suffix="+">0</div>
+            <div class="stat-unit">캠페인 운영</div>
+            <div class="stat-label">부산 관련<br>연간 마케팅 캠페인 수</div>
+          </div>
+          <div class="stat-box fragment" data-fragment-index="3">
+            <div class="stat-num" data-count="XXXX" data-suffix="+">0</div>
+            <div class="stat-unit">누적 리뷰</div>
+            <div class="stat-label">부산 상품<br>글로벌 여행자 리뷰</div>
+          </div>
+          <div class="stat-box fragment" data-fragment-index="4">
+            <div class="stat-num" data-count="48" data-suffix="">0</div>
+            <div class="stat-unit">4.8 Excellent</div>
+            <div class="stat-label">부산 상품 평균 평점<br>(5점 만점)</div>
+          </div>
+        </div>
+        <aside class="notes">부산 비즈니스 4대 KPI. 수치는 placeholder.</aside>
+      </section>
+
+      <!-- ══ SLIDE 9 · 주요 캠페인 ═════════════════════════ -->
+      <section class="slide layout-cards" id="slide-8"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 9: Campaigns"
+               data-index="8" data-bg="#00b8c0"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">부산 주요 캠페인 & 마케팅</span>
+          </div>
+          <span class="header-right">PART 2 · 부산 업데이트</span>
+        </div>
+        <div class="content-grid">
+          <div class="kk-card fragment" data-fragment-index="1">
+            <div class="card-badge" style="background:#fee600;color:#1a1a1a;">🌊 부산데이</div>
+            <h3>Busan Day Campaign</h3>
+            <div class="tag-row">
+              <span class="tag-chip">연XX회 운영</span>
+              <span class="tag-chip">일본·대만 타겟</span>
+            </div>
+            <p>부산 특화 프로모션 데이. KKday 메인 배너·SNS·뉴스레터 집중 노출로 부산 방문 의향 여행자를 직접 공략.</p>
+          </div>
+          <div class="kk-card fragment" data-fragment-index="2">
+            <div class="card-badge" style="background:#ff6b35;color:#fff;">🎆 X the Sky</div>
+            <h3>X The Sky Busan Firework</h3>
+            <div class="tag-row">
+              <span class="tag-chip">독점 패키지</span>
+              <span class="tag-chip">럭셔리 뷰포인트</span>
+            </div>
+            <p>KKday 단독 루프탑 불꽃축제 뷰잉 패키지. 고객단가 최상위 상품으로 글로벌 여행자 사이 높은 화제성.</p>
+          </div>
+          <div class="kk-card fragment" data-fragment-index="3">
+            <div class="card-badge" style="background:#4caf7d;color:#fff;">🗺️ Visit Busan Pass</div>
+            <h3>Visit Busan Pass</h3>
+            <div class="tag-row">
+              <span class="tag-chip">올인원 패스</span>
+              <span class="tag-chip">다국어 지원</span>
+            </div>
+            <p>부산 주요 명소·교통·식당을 하나의 패스로. KKday를 통해 일본·대만·동남아 여행자에게 광범위 유통.</p>
+          </div>
+          <div class="kk-card fragment" data-fragment-index="4">
+            <div class="card-badge" style="background:#7c4dff;color:#fff;">🏖️ KTO 해변축제</div>
+            <h3>부산 해변 축제 홍보</h3>
+            <div class="tag-row">
+              <span class="tag-chip">한국관광공사 협업</span>
+              <span class="tag-chip">여름 시즌</span>
+            </div>
+            <p>KTO·부산관광공사와 협력, 해운대·광안리 해변 축제를 글로벌 KKday 채널을 통해 적극 프로모션.</p>
+          </div>
+        </div>
+        <aside class="notes">4대 부산 캠페인 및 성공사례 소개.</aside>
+      </section>
+
+      <!-- ══ SLIDE 10 · 마켓 믹스 도넛 ═════════════════════ -->
+      <section class="slide layout-two-col" id="slide-9"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 10: Market Mix"
+               data-index="9" data-bg="#00c2cb"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">부산 마켓 믹스 2025</span>
+          </div>
+          <span class="header-right">PART 2 · 부산 업데이트</span>
+        </div>
+        <div class="content-area">
+          <div class="left-side">
+            <div style="font-size:38px;font-weight:800;color:#fee600;margin-bottom:24px;text-align:center;">국적별 구매 비중</div>
+            <div class="donut-wrap">
+              <svg viewBox="0 0 200 200" style="width:100%;height:100%;">
+                <!-- Japan XX% — placeholder 45% = dasharray 226.2 -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#00f5e0" stroke-width="36"
+                  stroke-dasharray="226.2 276.4" stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
+                <!-- Taiwan XX% — placeholder 30% = dasharray 150.8 -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#ff8c42" stroke-width="36"
+                  stroke-dasharray="150.8 351.8" stroke-dashoffset="-226.2" transform="rotate(-90 100 100)"/>
+                <!-- HK XX% — placeholder 10% = dasharray 50.3 -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#7c4dff" stroke-width="36"
+                  stroke-dasharray="50.3 452.3" stroke-dashoffset="-377.0" transform="rotate(-90 100 100)"/>
+                <!-- SEA XX% — placeholder 10% = dasharray 50.3 -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#f59e0b" stroke-width="36"
+                  stroke-dasharray="50.3 452.3" stroke-dashoffset="-427.3" transform="rotate(-90 100 100)"/>
+                <!-- Other 5% -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="36"
+                  stroke-dasharray="25.1 477.5" stroke-dashoffset="-477.6" transform="rotate(-90 100 100)"/>
+              </svg>
+              <div class="donut-center">
+                <div class="donut-year">2025</div>
+                <div class="donut-sub">마켓 분포</div>
+              </div>
+            </div>
+            <div class="legend-list">
+              <div class="legend-item"><span class="legend-dot" style="background:#00f5e0;"></span>🇯🇵 일본 XX%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#ff8c42;"></span>🇹🇼 대만 XX%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#7c4dff;"></span>🇭🇰 홍콩 XX%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span>🌏 동남아 XX%</div>
+            </div>
+          </div>
+          <div class="right-side">
+            <div class="insight-card fragment" data-fragment-index="1">
+              <h3>🇯🇵 일본 — 최대 마켓</h3>
+              <div class="big-num"><em>XX</em>%</div>
+              <p>일본 FIT 여행자 부산 수요 강세. 일본어 전용 마케팅 집중 운영 중.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="2">
+              <h3>🇹🇼 대만 — 안정적 2위</h3>
+              <div class="big-num"><em>XX</em>%</div>
+              <p>일본+대만 합산 XX%+. 양국 집중 전략 유효. 가족·커플 여행자 비중 높음.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="3">
+              <h3>🌏 동남아 — 고성장 마켓</h3>
+              <p>말레이시아·싱가포르·태국 등 <strong style="color:#fee600;">동남아 비중 빠르게 증가</strong> 중. 부산 K-Culture 콘텐츠 수요 견인.</p>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">부산 마켓 믹스. 일본>대만>동남아 순서 강조.</aside>
+      </section>
+
+      <!-- ══ SLIDE 11 · 마켓별 성장률 ══════════════════════ -->
+      <section class="slide layout-stats" id="slide-10"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 11: Market Growth"
+               data-index="10" data-bg="#009ba3"
+               aria-hidden="true">
+        <div class="kkday-header" style="width:100%;">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">마켓별 YoY 성장률 (2024 → 2025)</span>
+          </div>
+          <span class="header-right">PART 2 · 부산 업데이트</span>
+        </div>
+        <h2>마켓별 <em>성장률</em></h2>
+        <div class="stats-row">
+          <div class="stat-box fragment" data-fragment-index="1">
+            <div class="stat-num" data-count="XX" data-suffix="%">0%</div>
+            <div class="stat-unit">🇯🇵 일본</div>
+            <div class="stat-label">전년 대비 YoY 성장<br>최대 마켓 지속 확대</div>
+          </div>
+          <div class="stat-box fragment" data-fragment-index="2">
+            <div class="stat-num" data-count="XX" data-suffix="%">0%</div>
+            <div class="stat-unit">🇹🇼 대만</div>
+            <div class="stat-label">안정적 성장세<br>가족 여행 수요 증가</div>
+          </div>
+          <div class="stat-box fragment" data-fragment-index="3">
+            <div class="stat-num" data-count="XX" data-suffix="%">0%</div>
+            <div class="stat-unit">🇭🇰 홍콩</div>
+            <div class="stat-label">프리미엄 경험 선호<br>고객단가 높음</div>
+          </div>
+          <div class="stat-box fragment" data-fragment-index="4">
+            <div class="stat-num" data-count="XX" data-suffix="%">0%</div>
+            <div class="stat-unit">🌏 동남아</div>
+            <div class="stat-label">최고 성장률 마켓<br>K-Culture 수요 급증</div>
+          </div>
+        </div>
+        <aside class="notes">마켓별 YoY 성장률 비교. 동남아 급성장 스토리.</aside>
+      </section>
+
+      <!-- ══ SLIDE 12 · TOP PRODUCT CATEGORIES ═══════════ -->
+      <section class="slide layout-cards-3" id="slide-11"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 12: Top Product Categories"
+               data-index="11" data-bg="#00b8c0"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">부산 Top 카테고리</span>
+          </div>
+          <span class="header-right">PART 2 · 부산 업데이트</span>
+        </div>
+        <div class="content-grid">
+          <div class="kk-card fragment" data-fragment-index="1">
+            <div class="card-badge">🎡 No.1</div>
+            <h3>어트랙션 &<br>테마파크</h3>
+            <div class="tag-row">
+              <span class="tag-chip">해운대 SEA LIFE</span>
+              <span class="tag-chip">롯데월드</span>
+              <span class="tag-chip">기타 시설</span>
+            </div>
+            <p>부산 방문 외국인 여행자의 필수 코스. 전체 예약의 약 XX% 차지. 티켓 즉시 확정으로 인기.</p>
+          </div>
+          <div class="kk-card fragment" data-fragment-index="2">
+            <div class="card-badge" style="background:#f59e0b;">🚌 No.2</div>
+            <h3>교통 &<br>패스</h3>
+            <div class="tag-row">
+              <span class="tag-chip">Visit Busan Pass</span>
+              <span class="tag-chip">공항 이동</span>
+              <span class="tag-chip">KTX</span>
+            </div>
+            <p>공항 픽업·버스·패스 등 이동 수단. 도착 즉시 필요한 상품으로 전환율 높음.</p>
+          </div>
+          <div class="kk-card fragment" data-fragment-index="3">
+            <div class="card-badge" style="background:#4caf7d;">🎨 No.3</div>
+            <h3>투어 &<br>체험 액티비티</h3>
+            <div class="tag-row">
+              <span class="tag-chip">도보 투어</span>
+              <span class="tag-chip">K-Culture</span>
+              <span class="tag-chip">요리 클래스</span>
+            </div>
+            <p>부산 현지 문화 체험, 감천문화마을·광안리·자갈치 투어 등 고유 경험 수요 빠르게 증가.</p>
+          </div>
+        </div>
+        <aside class="notes">부산 Top 3 카테고리. 어트랙션>교통>투어 순서.</aside>
+      </section>
+
+      <!-- ══ SLIDE 13 · 성공사례 ════════════════════════════ -->
+      <section class="slide layout-cards-3" id="slide-12"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 13: Success Cases"
+               data-index="12" data-bg="#00c2cb"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">부산 성공사례</span>
+          </div>
+          <span class="header-right">PART 2 · 부산 업데이트</span>
+        </div>
+        <div class="content-grid">
+          <div class="kk-card fragment" data-fragment-index="1">
+            <div class="card-badge" style="background:#ff6b35;color:#fff;">🎆 사례 01</div>
+            <h3>X The Sky<br>불꽃축제 뷰잉</h3>
+            <div class="tag-row">
+              <span class="tag-chip">단독 패키지</span>
+              <span class="tag-chip">XX% 조기 완판</span>
+            </div>
+            <p>부산 불꽃축제 시즌 KKday 단독 루프탑 뷰잉 패키지 기획. 출시 XX일 내 전석 매진, 전년 대비 +XX% 매출 달성.</p>
+          </div>
+          <div class="kk-card fragment" data-fragment-index="2">
+            <div class="card-badge" style="background:#4caf7d;color:#fff;">🗺️ 사례 02</div>
+            <h3>Visit Busan Pass<br>글로벌 유통</h3>
+            <div class="tag-row">
+              <span class="tag-chip">XX개 언어 지원</span>
+              <span class="tag-chip">파트너십</span>
+            </div>
+            <p>부산관광공사와 협업, Visit Busan Pass를 KKday 글로벌 네트워크로 유통. 일본·대만·홍콩 주요 구매층 확보.</p>
+          </div>
+          <div class="kk-card fragment" data-fragment-index="3">
+            <div class="card-badge" style="background:#7c4dff;color:#fff;">🏖️ 사례 03</div>
+            <h3>KTO 부산<br>해변 축제 홍보</h3>
+            <div class="tag-row">
+              <span class="tag-chip">KTO 공동 마케팅</span>
+              <span class="tag-chip">글로벌 노출</span>
+            </div>
+            <p>한국관광공사(KTO)와 공동 캠페인으로 해운대·광안리 해변 축제를 아시아 전역 KKday 채널에 홍보, 외국인 방문객 유입 기여.</p>
+          </div>
+        </div>
+        <aside class="notes">3대 부산 성공사례. 수치는 placeholder.</aside>
+      </section>
+
+      <!-- ══ SLIDE 14 · SECTION BREAK: PART 3 ═════════════ -->
+      <section class="slide layout-section" id="slide-13"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 14: Part 3 Section"
+               data-index="13" data-bg="#006e75"
+               aria-hidden="true">
+        <div class="part-num">PART 3</div>
+        <div class="part-icon">🚀</div>
+        <h2><em>2026</em> Plans</h2>
+        <div class="part-sub">부산과 함께 성장하기 위한 KKday의 전략</div>
+        <aside class="notes">파트 3 구분 슬라이드. 2026 계획 시작.</aside>
+      </section>
+
+      <!-- ══ SLIDE 15 · 번들 상품 전략 ═════════════════════ -->
+      <section class="slide layout-bundle" id="slide-14"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 15: Bundle Strategy"
+               data-index="14" data-bg="#009ba3"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">번들 상품 전략 · 소비 촉진</span>
+          </div>
+          <span class="header-right">PART 3 · 2026 Plans</span>
+        </div>
+        <div style="text-align:center;margin-bottom:40px;" class="fragment" data-fragment-index="1">
+          <h2 style="font-size:60px;font-weight:900;color:#fff;">
+            개별 상품 → <em style="color:#fee600;">완전한 부산 여행 패키지</em>로
+          </h2>
+        </div>
+        <div class="bundle-grid">
+          <div class="bundle-item fragment" data-fragment-index="2">
+            <div class="bundle-icon">🎫</div>
+            <h3>현재 · 개별 판매</h3>
+            <p>어트랙션 티켓·교통·투어 각각 별도 구매. 여행자 구매 단계 복잡, 객단가 제한적.</p>
+            <div class="bundle-arrow">현재 상태 →</div>
+          </div>
+          <div class="bundle-item highlight fragment" data-fragment-index="3">
+            <div class="bundle-icon">🎁</div>
+            <h3>2026 · 번들 PKG</h3>
+            <p>교통 + 어트랙션 + 체험을 하나의 할인 패키지로. 구매 편의 극대화, 객단가 3~5배 향상 기대.</p>
+            <div class="bundle-arrow" style="color:#fee600;">▶ 핵심 전략</div>
+          </div>
+          <div class="bundle-item fragment" data-fragment-index="4">
+            <div class="bundle-icon">📈</div>
+            <h3>목표 · 부산 소비 극대화</h3>
+            <p>글로벌 여행자의 부산 체류 시간 및 지출 증가. 시설사·관광업 전반 매출 동반 성장.</p>
+            <div class="bundle-arrow">목표 상태 →</div>
+          </div>
+        </div>
+        <aside class="notes">번들 전략 3단계 설명. 핵심은 객단가 향상과 소비 촉진.</aside>
+      </section>
+
+      <!-- ══ SLIDE 16 · 교통 세그먼트 협업 ════════════════ -->
+      <section class="slide layout-two-col" id="slide-15"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 16: Transport Partnership"
+               data-index="15" data-bg="#00b8c0"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">교통 세그먼트 파트너십</span>
+          </div>
+          <span class="header-right">PART 3 · 2026 Plans</span>
+        </div>
+        <div class="content-area">
+          <div class="left-side">
+            <!-- Transport hub diagram -->
+            <div style="background:rgba(0,0,0,0.15);border-radius:24px;padding:52px;text-align:center;width:100%;">
+              <div style="font-size:72px;margin-bottom:20px;">🚄 ✈️ 🚌</div>
+              <div style="font-size:40px;font-weight:900;color:#fee600;margin-bottom:16px;">교통 허브 연계</div>
+              <div style="font-size:24px;color:rgba(255,255,255,0.75);line-height:1.6;">
+                부산역 · 김해공항<br>부산 시내 교통<br>↕<br>
+                <span style="color:#fee600;">KKday 액티비티</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:20px;margin-top:24px;justify-content:center;">
+              <div style="background:rgba(0,0,0,0.15);border-radius:14px;padding:20px 28px;text-align:center;">
+                <div style="font-size:36px;">🚆</div>
+                <div style="font-size:18px;color:rgba(255,255,255,0.8);margin-top:8px;">KTX<br>연계</div>
+              </div>
+              <div style="background:rgba(0,0,0,0.15);border-radius:14px;padding:20px 28px;text-align:center;">
+                <div style="font-size:36px;">✈️</div>
+                <div style="font-size:18px;color:rgba(255,255,255,0.8);margin-top:8px;">공항<br>이동</div>
+              </div>
+              <div style="background:rgba(0,0,0,0.15);border-radius:14px;padding:20px 28px;text-align:center;">
+                <div style="font-size:36px;">🚌</div>
+                <div style="font-size:18px;color:rgba(255,255,255,0.8);margin-top:8px;">시내<br>교통</div>
+              </div>
+            </div>
+          </div>
+          <div class="right-side">
+            <div class="insight-card fragment" data-fragment-index="1">
+              <h3>🚄 KTX + 부산 투어 번들</h3>
+              <p>서울-부산 KTX 승차권과 부산 당일 투어를 묶어 판매. 서울 여행자의 부산 당일/1박 방문 유도.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="2">
+              <h3>✈️ 김해공항 도착 패키지</h3>
+              <p>공항 픽업 + 시설 티켓 + 숙박 연계 등 <strong style="color:#fee600;">도착 즉시 부산을 즐기는</strong> 올인원 상품 기획.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="3">
+              <h3>🚌 시내 교통 + 패스 연동</h3>
+              <p>부산 시티투어버스·지하철 패스와 어트랙션 티켓 통합. 이동 편의 + 관광 시간 극대화.</p>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">교통 세그먼트와의 협업 방향 설명. KTX·공항·시내교통 3가지.</aside>
+      </section>
+
+      <!-- ══ SLIDE 17 · 익스피리언스 & 근교 투어 ══════════ -->
+      <section class="slide layout-cards-3" id="slide-16"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 17: Experience and Day Trips"
+               data-index="16" data-bg="#00c2cb"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">익스피리언스 & 근교 투어 확대</span>
+          </div>
+          <span class="header-right">PART 3 · 2026 Plans</span>
+        </div>
+        <div class="content-grid">
+          <div class="kk-card fragment" data-fragment-index="1">
+            <div class="card-badge">🎨 체험형 관광</div>
+            <h3>부산 고유<br>익스피리언스</h3>
+            <div class="tag-row">
+              <span class="tag-chip">K-Food 클래스</span>
+              <span class="tag-chip">전통 공예</span>
+              <span class="tag-chip">서핑 체험</span>
+            </div>
+            <p>부산에서만 경험 가능한 로컬 문화·음식·자연 체험 상품 강화. 재방문 의향을 높이는 '기억에 남는 경험' 기획.</p>
+          </div>
+          <div class="kk-card fragment" data-fragment-index="2">
+            <div class="card-badge" style="background:#f59e0b;color:#1a1a1a;">🚗 근교 1일 투어</div>
+            <h3>부산 근교<br>당일 여행권</h3>
+            <div class="tag-row">
+              <span class="tag-chip">경주·통영</span>
+              <span class="tag-chip">거제·남해</span>
+              <span class="tag-chip">하동·산청</span>
+            </div>
+            <p>부산을 베이스로 경주·통영·거제 등 근교 명소를 당일 투어로 연결. 글로벌 여행자의 한국 체류 일수 연장 효과.</p>
+          </div>
+          <div class="kk-card fragment" data-fragment-index="3">
+            <div class="card-badge" style="background:#7c4dff;color:#fff;">🌊 테마 투어</div>
+            <h3>K-Culture<br>테마 투어</h3>
+            <div class="tag-row">
+              <span class="tag-chip">K-Drama 로케</span>
+              <span class="tag-chip">야경 투어</span>
+              <span class="tag-chip">음식 투어</span>
+            </div>
+            <p>K-드라마 촬영지·야경 명소·감천문화마을 등 테마 기반 소그룹 투어. SNS 확산력 높은 콘텐츠형 상품.</p>
+          </div>
+        </div>
+        <aside class="notes">2026 익스피리언스 및 근교 투어 3방향 설명.</aside>
+      </section>
+
+      <!-- ══ SLIDE 18 · CLOSING ═════════════════════════════ -->
+      <section class="slide layout-end" id="slide-17"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 18: Let's Grow Busan Together"
+               data-index="17" data-bg="#006e75"
+               aria-hidden="true">
+        <div style="margin-bottom:20px;">
+          <img class="kkday-logo-img size-xl" style="height:120px;" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+        </div>
+        <div class="tagline">
+          Let's grow Busan together<br>
+          <span style="font-size:28px;color:rgba(255,255,255,0.6);">More global travellers to visit Busan and near cities</span>
+        </div>
+        <div class="end-grid fragment" data-fragment-index="1">
+          <div class="end-pill accent">부산 상품 XXX+</div>
+          <div class="end-pill">글로벌 XX개국 여행자</div>
+          <div class="end-pill">YoY +XX% 성장</div>
+          <div class="end-pill">550+ 도시 유통망</div>
+        </div>
+        <button class="restart-btn" onclick="presentation.goTo(0,'backward')">↺ 처음으로</button>
+        <aside class="notes">마무리 슬라이드. "Let's grow Busan together" 메시지로 마무리.</aside>
+      </section>
+
+    </div><!-- #frame -->
+  </div><!-- #viewport -->
+</main>
+
+<!-- Help modal -->
+<div id="help-modal" role="dialog" aria-modal="true" aria-label="키보드 단축키" hidden>
+  <div class="modal-box">
+    <h2>⌨️ 키보드 단축키</h2>
+    <table>
+      <tr><td><kbd>→</kbd> <kbd>Space</kbd></td><td>다음 슬라이드</td></tr>
+      <tr><td><kbd>←</kbd></td><td>이전 슬라이드</td></tr>
+      <tr><td><kbd>Home</kbd></td><td>첫 번째 슬라이드</td></tr>
+      <tr><td><kbd>End</kbd></td><td>마지막 슬라이드</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면 토글</td></tr>
+      <tr><td><kbd>P</kbd></td><td>PDF 저장</td></tr>
+      <tr><td><kbd>X</kbd></td><td>PPTX 저장</td></tr>
+      <tr><td><kbd>T</kbd></td><td>내보내기 버튼 표시</td></tr>
+      <tr><td><kbd>?</kbd> / <kbd>Esc</kbd></td><td>이 창 열기 / 닫기</td></tr>
+    </table>
+    <button class="modal-close" id="close-help">확인</button>
+  </div>
+</div>
+
+<script>
+/* ── Count-up ────────────────────────────────────────── */
+function countUp(el) {
+  const raw = el.dataset.count;
+  if (!raw || isNaN(parseInt(raw))) return;
+  const target = parseInt(raw);
+  const suffix = el.dataset.suffix || '';
+  const duration = 1100;
+  const start = performance.now();
+  (function tick(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(ease * target) + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  })(start);
+}
+
+/* ── Presentation engine ─────────────────────────────── */
+class Presentation {
+  constructor() {
+    this.slides      = [...document.querySelectorAll('.slide')];
+    this.total       = this.slides.length;
+    this.current     = 0;
+    this.isAnimating = false;
+    document.getElementById('tot').textContent = this.total;
+    this.init();
+  }
+
+  init() {
+    this.applyScale();
+    new ResizeObserver(() => this.applyScale())
+      .observe(document.getElementById('viewport'));
+
+    const init = Math.min(
+      Math.max(parseInt(location.hash.slice(1)) || 0, 0),
+      this.total - 1
+    );
+    this.goTo(init, 'none');
+    this.bindKeyboard();
+    this.bindPointer();
+
+    document.getElementById('btn-prev').addEventListener('click', () => this.prev());
+    document.getElementById('btn-next').addEventListener('click', () => this.next());
+
+    window.addEventListener('hashchange', () => {
+      const i = parseInt(location.hash.slice(1)) || 0;
+      if (i !== this.current) this.goTo(i, 'none');
+    });
+  }
+
+  applyScale() {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const scale = Math.min(vw / 1920, vh / 1080);
+    const tx = (vw - 1920 * scale) / 2;
+    const ty = (vh - 1080 * scale) / 2;
+    document.getElementById('frame').style.transform =
+      `translate(${tx}px,${ty}px) scale(${scale})`;
+  }
+
+  goTo(index, dir = 'forward') {
+    if (index < 0 || index >= this.total) return;
+    if (this.isAnimating && dir !== 'none') return;
+    if (index === this.current && dir !== 'none') return;
+
+    this.isAnimating = true;
+    const prev = this.slides[this.current];
+    const next = this.slides[index];
+
+    prev.setAttribute('aria-hidden', 'true');
+    prev.classList.remove('present');
+    prev.classList.add(dir === 'backward' ? 'future' : 'past');
+
+    next.removeAttribute('aria-hidden');
+    next.classList.remove('past', 'future');
+    next.classList.add('present');
+
+    next.querySelectorAll('[data-count]').forEach(n => countUp(n));
+
+    this.current = index;
+    this.updateUI();
+
+    document.getElementById('slide-bg').style.backgroundColor =
+      this.slides[index].dataset.bg || '#00c2cb';
+
+    const unlock = () => { this.isAnimating = false; };
+    if (dir === 'none') { unlock(); return; }
+
+    const t = setTimeout(unlock, 750);
+    next.addEventListener('transitionend', e => {
+      if (e.propertyName === 'transform') { clearTimeout(t); unlock(); }
+    }, { once: true });
+    next.addEventListener('transitioncancel', () => {
+      clearTimeout(t); unlock();
+    }, { once: true });
+  }
+
+  next() { this.goTo(this.current + 1, 'forward'); }
+  prev() { this.goTo(this.current - 1, 'backward'); }
+
+  updateUI() {
+    document.getElementById('cur').textContent = this.current + 1;
+    document.getElementById('progress-fill').style.transform =
+      `scaleX(${(this.current + 1) / this.total})`;
+    document.getElementById('sr-status').textContent =
+      `슬라이드 ${this.current + 1} / ${this.total}`;
+    history.replaceState(null, '', `#${this.current}`);
+  }
+
+  bindKeyboard() {
+    document.addEventListener('keydown', e => {
+      const a = document.activeElement;
+      if (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown': case 'Enter':
+          e.preventDefault(); this.next(); break;
+        case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+          e.preventDefault(); this.prev(); break;
+        case 'Home': e.preventDefault(); this.goTo(0, 'backward'); break;
+        case 'End':  e.preventDefault(); this.goTo(this.total - 1, 'forward'); break;
+        case '?':    toggleHelp(); break;
+        case 'Escape': closeHelp(); break;
+        case 'f': case 'F': toggleFullscreen(); break;
+        case 'p': case 'P': exportPDF(); break;
+        case 'x': case 'X': exportPPTX(); break;
+        case 't': case 'T': document.body.classList.toggle('show-toolbar'); break;
+      }
+    });
+  }
+
+  bindPointer() {
+    const el = document.getElementById('presentation');
+    let sx = 0, sy = 0, st = 0;
+    el.style.touchAction = 'none';
+    el.addEventListener('pointerdown', e => {
+      if (!e.isPrimary) return;
+      sx = e.clientX; sy = e.clientY; st = Date.now();
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointerup', e => {
+      if (!e.isPrimary) return;
+      const dx = sx - e.clientX, dy = sy - e.clientY;
+      const vel = Math.abs(dx) / Math.max(Date.now() - st, 1);
+      if (Math.abs(dx) > Math.abs(dy) && (Math.abs(dx) > 60 || vel > 0.25))
+        dx > 0 ? this.next() : this.prev();
+      el.releasePointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointercancel', e => el.releasePointerCapture(e.pointerId));
+  }
+}
+
+/* ── Help modal ──────────────────────────────────────── */
+function toggleHelp() {
+  document.getElementById('help-modal').hasAttribute('hidden') ? openHelp() : closeHelp();
+}
+function openHelp() {
+  const m = document.getElementById('help-modal');
+  m.removeAttribute('hidden');
+  document.getElementById('close-help').focus();
+}
+function closeHelp() {
+  document.getElementById('help-modal').setAttribute('hidden', '');
+}
+document.getElementById('close-help').addEventListener('click', closeHelp);
+document.getElementById('help-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeHelp();
+});
+
+/* ── Fullscreen ──────────────────────────────────────── */
+function toggleFullscreen() {
+  if (!document.fullscreenElement)
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  else
+    document.exitFullscreen?.();
+}
+
+/* ── CDN loader ──────────────────────────────────────── */
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+/* ── PDF Export ──────────────────────────────────────── */
+function exportPDF() {
+  document.querySelectorAll('.slide').forEach(s => {
+    s.style.backgroundColor = s.dataset.bg || '#00c2cb';
+  });
+  window.print();
+  setTimeout(() => {
+    document.querySelectorAll('.slide').forEach(s => { s.style.backgroundColor = ''; });
+  }, 1000);
+}
+
+/* ── PPTX Export ─────────────────────────────────────── */
+async function exportPPTX() {
+  const btn = document.getElementById('btn-pptx');
+  const orig = btn.textContent;
+  btn.disabled = true;
+
+  try {
+    if (!window.html2canvas)
+      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+    if (!window.PptxGenJS)
+      await loadScript('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js');
+
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_WIDE';
+
+    const frame    = document.getElementById('frame');
+    const viewport = document.getElementById('viewport');
+    const savedCurrent = presentation.current;
+
+    const uiEls = document.querySelectorAll(
+      '#progress, #counter, #help-hint, .nav-btn, #export-toolbar, #help-modal'
+    );
+    uiEls.forEach(el => { el._sd = el.style.display; el.style.display = 'none'; });
+
+    frame.style.transition = 'none';
+    frame.style.transform  = 'scale(1)';
+    frame.style.top = '0'; frame.style.left = '0';
+    viewport.style.overflow = 'visible';
+
+    for (let i = 0; i < presentation.total; i++) {
+      btn.textContent = `⏳ ${i + 1} / ${presentation.total}`;
+      presentation.goTo(i, 'none');
+
+      frame.querySelectorAll('.fragment').forEach(el => {
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+        el.style.animation = 'none';
+      });
+
+      const slideBg = presentation.slides[i].dataset.bg || '#00c2cb';
+      presentation.slides[i].style.backgroundColor = slideBg;
+
+      await new Promise(r => setTimeout(r, 200));
+
+      const canvas = await html2canvas(frame, {
+        width: 1920, height: 1080,
+        scale: 1,
+        useCORS: true, allowTaint: true, logging: false,
+        backgroundColor: slideBg,
+        x: 0, y: 0, scrollX: 0, scrollY: 0,
+        windowWidth: 1920, windowHeight: 1080
+      });
+
+      frame.querySelectorAll('.fragment').forEach(el => {
+        el.style.opacity = '';
+        el.style.transform = '';
+        el.style.animation = '';
+      });
+      presentation.slides[i].style.backgroundColor = '';
+
+      const imgData = canvas.toDataURL('image/png');
+      const slide = pptx.addSlide();
+      slide.addImage({ data: imgData, x: 0, y: 0, w: '100%', h: '100%' });
+    }
+
+    uiEls.forEach(el => { el.style.display = el._sd || ''; });
+    frame.style.transition = '';
+    viewport.style.overflow = 'hidden';
+    presentation.applyScale();
+    presentation.goTo(savedCurrent, 'none');
+
+    await pptx.writeFile({ fileName: 'kkday-busan-2026.pptx' });
+
+  } catch (err) {
+    console.error('PPTX export failed:', err);
+    alert('PPTX 내보내기 실패: ' + err.message + '\n\n인터넷 연결을 확인하거나 PDF로 저장해 주세요.');
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
+}
+
+/* ── Boot ────────────────────────────────────────────── */
+const presentation = new Presentation();
+</script>
+</body>
+</html>

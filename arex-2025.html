@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KKday · AREX Market Mix 2025</title>
+  <style>
+    /* ─── Reset ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #009ba3;
+      font-family: Verdana, 'Nunito', 'Segoe UI', sans-serif;
+    }
+
+    /* ─── KKday Logo image ───────────────────────────────── */
+    .kkday-logo-img { display: block; object-fit: contain; }
+    .kkday-logo-img.size-xl { height: 96px; }
+    .kkday-logo-img.size-md { height: 64px; }
+    .kkday-logo-img.size-sm { height: 48px; }
+
+    /* ─── SR only ────────────────────────────────────────── */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    /* ─── Viewport ───────────────────────────────────────── */
+    #viewport {
+      position: fixed; inset: 0;
+      display: grid; place-items: center;
+      overflow: hidden;
+    }
+
+    /* ─── Fixed-size frame ───────────────────────────────── */
+    #frame {
+      position: relative;
+      width: 1920px; height: 1080px;
+      transform-origin: center center;
+    }
+
+    /* ─── Background layer ───────────────────────────────── */
+    #slide-bg {
+      position: fixed; inset: 0; z-index: 0;
+      transition: background-color 0.55s ease;
+      pointer-events: none;
+    }
+
+    /* ─── Slides ─────────────────────────────────────────── */
+    .slide {
+      position: absolute; inset: 0;
+      opacity: 0; visibility: hidden;
+      transform: translateX(100%);
+      transition: transform 0.6s cubic-bezier(0.26, 0.86, 0.44, 0.985),
+                  opacity 0.6s ease, visibility 0.6s;
+      will-change: transform, opacity;
+      display: flex; flex-direction: column;
+      padding: 72px 96px;
+      overflow: hidden;
+    }
+    .slide.past   { transform: translateX(-100%); opacity: 0; visibility: hidden; }
+    .slide.present{ transform: translateX(0);     opacity: 1; visibility: visible; }
+    .slide.future { transform: translateX(100%);  opacity: 0; visibility: hidden; }
+
+    /* ─── Fragments — 슬라이드 진입 시 자동 순차 등장 ────── */
+    .fragment {
+      opacity: 0;
+      transform: translateY(18px);
+      animation: none;
+    }
+    /* 슬라이드가 .present가 되면 각 fragment를 순서대로 fade-in */
+    .slide.present .fragment {
+      animation: fragmentIn 0.45s ease forwards;
+    }
+    /* nth-child로 stagger delay 적용 */
+    .slide.present .fragment:nth-child(1)  { animation-delay: 0.15s; }
+    .slide.present .fragment:nth-child(2)  { animation-delay: 0.30s; }
+    .slide.present .fragment:nth-child(3)  { animation-delay: 0.45s; }
+    .slide.present .fragment:nth-child(4)  { animation-delay: 0.60s; }
+    .slide.present .fragment:nth-child(5)  { animation-delay: 0.75s; }
+    .slide.present .fragment:nth-child(6)  { animation-delay: 0.90s; }
+    /* data-fragment-index 기반 delay */
+    .slide.present [data-fragment-index="1"] { animation-delay: 0.15s; }
+    .slide.present [data-fragment-index="2"] { animation-delay: 0.35s; }
+    .slide.present [data-fragment-index="3"] { animation-delay: 0.55s; }
+    .slide.present [data-fragment-index="4"] { animation-delay: 0.75s; }
+    .slide.present [data-fragment-index="5"] { animation-delay: 0.95s; }
+    .slide.present [data-fragment-index="6"] { animation-delay: 1.15s; }
+    @keyframes fragmentIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── KKday header bar (all slides) ─────────────────── */
+    .kkday-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 48px; flex-shrink: 0;
+    }
+    .header-divider {
+      width: 2px; height: 40px; background: rgba(255,255,255,0.4);
+      margin: 0 24px;
+    }
+    .header-tagline {
+      font-size: 26px; color: rgba(255,255,255,0.85); font-weight: 400;
+    }
+    .header-right {
+      font-size: 24px; color: rgba(255,255,255,0.6); letter-spacing: 1px;
+    }
+
+    /* ─── Progress bar ───────────────────────────────────── */
+    #progress {
+      position: fixed; bottom: 0; left: 0; z-index: 200;
+      width: 100%; height: 5px;
+      background: rgba(0,0,0,0.15);
+    }
+    #progress-fill {
+      height: 100%; background: #fee600;
+      transform-origin: left; transform: scaleX(0);
+      transition: transform 0.35s ease;
+    }
+
+    /* ─── Counter ────────────────────────────────────────── */
+    #counter {
+      position: fixed; bottom: 20px; right: 44px; z-index: 200;
+      font-size: 22px; color: rgba(255,255,255,0.55);
+      font-variant-numeric: tabular-nums; pointer-events: none;
+    }
+
+    /* ─── Nav buttons ────────────────────────────────────── */
+    .nav-btn {
+      position: fixed; top: 50%; z-index: 200;
+      transform: translateY(-50%);
+      width: 52px; height: 52px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(0,0,0,0.15); color: rgba(255,255,255,0.7);
+      font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-btn:hover { background: rgba(0,0,0,0.3); color: #fff; }
+    #btn-prev { left: 16px; }
+    #btn-next { right: 16px; }
+
+    /* ─── Help hint ──────────────────────────────────────── */
+    #help-hint {
+      position: fixed; bottom: 20px; left: 44px; z-index: 200;
+      font-size: 18px; color: rgba(255,255,255,0.35); pointer-events: none;
+    }
+
+    /* ─── Help modal ─────────────────────────────────────── */
+    #help-modal {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #help-modal[hidden] { display: none; }
+    .modal-box {
+      background: #fff; border-radius: 20px; padding: 52px 60px;
+      color: #1a1a1a; max-width: 520px; width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    .modal-box h2 { font-size: 30px; margin-bottom: 28px; color: #00c2cb; }
+    .modal-box table { border-collapse: collapse; width: 100%; }
+    .modal-box td { padding: 10px 0; font-size: 20px; color: #333; }
+    .modal-box td:first-child { color: #00c2cb; width: 48%; font-weight: 600; }
+    kbd {
+      background: #f0fafb; border: 1px solid #c0e8ea;
+      border-radius: 4px; padding: 2px 8px; font-size: 16px;
+      font-family: monospace; color: #00a0a8;
+    }
+    .modal-close {
+      margin-top: 32px; width: 100%; padding: 14px;
+      background: #00c2cb; color: #fff; border: none;
+      border-radius: 10px; font-size: 18px; font-weight: 700;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .modal-close:hover { background: #00a8b0; }
+
+    /* ══════════════════════════════════════════════════════
+       COMMON COMPONENTS
+    ══════════════════════════════════════════════════════ */
+    .section-label {
+      display: inline-block;
+      background: rgba(0,0,0,0.15); border-radius: 100px;
+      padding: 8px 28px; font-size: 22px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      color: rgba(255,255,255,0.85); margin-bottom: 32px;
+    }
+
+    .white-card {
+      background: #fff; border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 1 — TITLE
+    ══════════════════════════════════════════════════════ */
+    .s1 { align-items: center; justify-content: center; text-align: center; }
+
+    .s1 .eyebrow {
+      font-size: 26px; letter-spacing: 4px; text-transform: uppercase;
+      color: rgba(255,255,255,0.7); margin-bottom: 28px; font-weight: 500;
+    }
+    .s1 h1 {
+      font-size: 108px; font-weight: 900; line-height: 1.05;
+      color: #fff; letter-spacing: -2px; margin-bottom: 20px;
+    }
+    .s1 h1 em { color: #fee600; font-style: normal; }
+    .s1 .sub {
+      font-size: 34px; color: rgba(255,255,255,0.75);
+      font-weight: 400; margin-bottom: 48px;
+    }
+    .s1 .meta-row {
+      display: flex; gap: 48px; align-items: center; justify-content: center;
+    }
+    .meta-pill {
+      background: rgba(0,0,0,0.18); border-radius: 100px;
+      padding: 14px 36px; font-size: 26px; font-weight: 700; color: #fff;
+    }
+    .meta-pill.yellow { background: #fee600; color: #1a1a1a; }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 2 — MARKET MIX (Donut)
+    ══════════════════════════════════════════════════════ */
+    .s2 .content-area {
+      display: flex; flex: 1; gap: 80px; align-items: center;
+    }
+    .s2 .chart-side { flex: 0 0 680px; display: flex; flex-direction: column; align-items: center; }
+    .s2 .chart-title { font-size: 48px; font-weight: 800; color: #fee600; margin-bottom: 32px; text-align: center; }
+    .donut-wrap { position: relative; width: 480px; height: 480px; }
+    .donut-wrap svg { width: 100%; height: 100%; }
+    .donut-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .donut-year { font-size: 64px; font-weight: 900; color: #fff; }
+    .donut-sub  { font-size: 24px; color: rgba(255,255,255,0.7); }
+
+    .legend-list { display: flex; flex-direction: column; gap: 18px; margin-top: 28px; }
+    .legend-item { display: flex; align-items: center; gap: 14px; font-size: 26px; color: #fff; font-weight: 600; }
+    .legend-dot  { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; }
+
+    .s2 .right-side { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+    .insight-card {
+      background: rgba(0,0,0,0.15); border-radius: 18px;
+      padding: 36px 40px; border-left: 5px solid #fee600;
+    }
+    .insight-card h3 { font-size: 32px; font-weight: 800; color: #fee600; margin-bottom: 10px; }
+    .insight-card p  { font-size: 26px; color: rgba(255,255,255,0.85); line-height: 1.55; }
+    .insight-card .big-num {
+      font-size: 72px; font-weight: 900; color: #fff; line-height: 1;
+    }
+    .insight-card .big-num em { color: #fee600; font-style: normal; }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 3 — AREX PRODUCT
+    ══════════════════════════════════════════════════════ */
+    .s3 .content-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 48px; flex: 1;
+    }
+    .product-card {
+      background: #fff; border-radius: 20px;
+      padding: 48px 44px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .product-card .p-badge {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: #00c2cb; color: #fff;
+      padding: 8px 20px; border-radius: 100px;
+      font-size: 20px; font-weight: 700; align-self: flex-start;
+    }
+    .product-card h3 { font-size: 34px; font-weight: 800; color: #1a1a1a; line-height: 1.3; }
+    .product-card .price {
+      font-size: 40px; font-weight: 900; color: #00c2cb;
+    }
+    .product-card .price small { font-size: 22px; color: #888; font-weight: 400; }
+    .product-card p { font-size: 24px; color: #555; line-height: 1.6; }
+    .tag-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .tag-chip {
+      background: #f0fafb; border: 1.5px solid #c0e8ea; color: #00a0a8;
+      padding: 6px 18px; border-radius: 100px; font-size: 20px; font-weight: 600;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 4 — BUNDLE PKG
+    ══════════════════════════════════════════════════════ */
+    .s4 .bundle-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 40px; flex: 1;
+    }
+    .bundle-item {
+      background: rgba(0,0,0,0.15); border-radius: 20px;
+      padding: 44px 36px; display: flex; flex-direction: column; gap: 18px;
+      border-top: 4px solid rgba(255,255,255,0.4);
+      transition: border-color 0.2s;
+    }
+    .bundle-item.highlight { border-top-color: #fee600; background: rgba(254,230,0,0.1); }
+    .bundle-icon { font-size: 52px; }
+    .bundle-item h3 { font-size: 30px; font-weight: 800; color: #fff; line-height: 1.3; }
+    .bundle-item p  { font-size: 22px; color: rgba(255,255,255,0.75); line-height: 1.6; flex: 1; }
+    .bundle-arrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 22px; font-weight: 700; color: #fee600;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 5 — STATS
+    ══════════════════════════════════════════════════════ */
+    .s5 { align-items: center; text-align: center; }
+    .s5 h2 {
+      font-size: 68px; font-weight: 900; color: #fff; margin-bottom: 64px;
+    }
+    .s5 h2 em { color: #fee600; font-style: normal; }
+    .stats-row { display: flex; gap: 40px; width: 100%; }
+    .stat-box {
+      flex: 1; background: rgba(0,0,0,0.15); border-radius: 20px;
+      padding: 52px 36px; border-bottom: 4px solid transparent;
+      transition: border-color 0.3s;
+    }
+    .stat-box.visible { border-bottom-color: #fee600; }
+    .stat-num {
+      font-size: 88px; font-weight: 900; color: #fee600;
+      line-height: 1; margin-bottom: 14px;
+    }
+    .stat-unit { font-size: 40px; font-weight: 700; color: #fff; }
+    .stat-label { font-size: 26px; color: rgba(255,255,255,0.75); }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 6 — CATEGORIES (kkday style)
+    ══════════════════════════════════════════════════════ */
+    .s6 .cat-grid {
+      display: flex; gap: 48px; flex: 1; align-items: center; justify-content: center;
+    }
+    .cat-item { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+    .cat-circle {
+      width: 200px; height: 200px; border-radius: 50%;
+      background: rgba(0,0,0,0.15); overflow: hidden;
+      border: 4px solid rgba(255,255,255,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 80px;
+      transition: border-color 0.25s, transform 0.25s;
+    }
+    .cat-item.visible .cat-circle { border-color: #fff; transform: scale(1.04); }
+    .cat-name { font-size: 26px; font-weight: 700; color: #fff; text-align: center; line-height: 1.3; }
+    .cat-name em { color: #fee600; font-style: normal; }
+
+    /* ══════════════════════════════════════════════════════
+       SLIDE 7 — END
+    ══════════════════════════════════════════════════════ */
+    .s7 { align-items: center; justify-content: center; text-align: center; }
+    .s7 .big-logo {
+      font-family: Verdana, sans-serif;
+      font-size: 120px; font-weight: 700; color: #fff;
+      letter-spacing: -2px; margin-bottom: 16px;
+    }
+    .s7 .tagline {
+      font-size: 36px; color: rgba(255,255,255,0.8);
+      margin-bottom: 60px; font-weight: 400;
+    }
+    .s7 .end-grid { display: flex; gap: 36px; margin-bottom: 60px; }
+    .end-pill {
+      background: rgba(0,0,0,0.18); border-radius: 100px;
+      padding: 20px 44px; font-size: 28px; font-weight: 700; color: #fff;
+      border: 2px solid rgba(255,255,255,0.25);
+    }
+    .end-pill.accent { background: #fee600; color: #1a1a1a; border-color: #fee600; }
+    .restart-btn {
+      padding: 22px 64px; border-radius: 100px;
+      background: rgba(0,0,0,0.2); border: 3px solid rgba(255,255,255,0.4);
+      color: #fff; font-size: 26px; font-weight: 700; cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .restart-btn:hover { background: rgba(0,0,0,0.35); border-color: #fff; }
+  </style>
+</head>
+<body>
+
+<div id="sr-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="slide-bg" aria-hidden="true"></div>
+<div id="progress" aria-hidden="true"><div id="progress-fill"></div></div>
+<div id="counter" aria-hidden="true"><span id="cur">1</span> / <span id="tot">7</span></div>
+<div id="help-hint" aria-hidden="true">? 단축키</div>
+<button class="nav-btn" id="btn-prev" aria-label="이전 슬라이드">&#8592;</button>
+<button class="nav-btn" id="btn-next" aria-label="다음 슬라이드">&#8594;</button>
+
+<main id="presentation" role="application" aria-roledescription="presentation" tabindex="0">
+  <div id="viewport">
+    <div id="frame">
+
+      <!-- ══ SLIDE 1 · Title ══════════════════════════════ -->
+      <section class="slide s1" id="slide-0"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 1: Title"
+               data-index="0" data-bg="#00c2cb">
+        <div style="position:absolute;top:48px;left:88px;">
+          <img class="kkday-logo-img size-xl" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+        </div>
+        <div class="eyebrow">2025 Business Review</div>
+        <h1>Market Mix<br><em>Airport Railroad</em><br>AREX</h1>
+        <div class="sub">인천공항 철도 시장 분석 및 번들 전략</div>
+        <div class="meta-row fragment" data-fragment-index="1">
+          <div class="meta-pill yellow">Japan 52.3%</div>
+          <div class="meta-pill">Taiwan 33.3%</div>
+          <div class="meta-pill">HK 4.2%</div>
+        </div>
+        <aside class="notes">AREX 시장 분석 타이틀 슬라이드. Fragment로 주요 마켓 비중을 보여줍니다.</aside>
+      </section>
+
+      <!-- ══ SLIDE 2 · Market Mix ═════════════════════════ -->
+      <section class="slide s2" id="slide-1"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 2: Market Mix"
+               data-index="1" data-bg="#00b8c0"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">Market Mix · Airport Railroad AREX</span>
+          </div>
+          <span class="header-right">2025</span>
+        </div>
+        <div class="content-area">
+          <!-- Donut chart -->
+          <div class="chart-side">
+            <div class="chart-title">국가별 구매 비중</div>
+            <div class="donut-wrap">
+              <svg viewBox="0 0 200 200">
+                <!-- Japan 52.3% -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#00f5e0" stroke-width="36"
+                  stroke-dasharray="262.9 238.7" stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
+                <!-- Taiwan 33.3% -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#ff8c42" stroke-width="36"
+                  stroke-dasharray="167.6 334" stroke-dashoffset="-262.9" transform="rotate(-90 100 100)"/>
+                <!-- Hongkong 4.2% -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#7c4dff" stroke-width="36"
+                  stroke-dasharray="21.1 480.5" stroke-dashoffset="-430.5" transform="rotate(-90 100 100)"/>
+                <!-- Other 8.6% -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#4caf7d" stroke-width="36"
+                  stroke-dasharray="43.3 458.3" stroke-dashoffset="-451.6" transform="rotate(-90 100 100)"/>
+                <!-- 나머지 -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="36"
+                  stroke-dasharray="7.3 494.3" stroke-dashoffset="-494.9" transform="rotate(-90 100 100)"/>
+              </svg>
+              <div class="donut-center">
+                <div class="donut-year">2025</div>
+                <div class="donut-sub">국가 분포</div>
+              </div>
+            </div>
+            <div class="legend-list">
+              <div class="legend-item"><span class="legend-dot" style="background:#00f5e0;"></span>Japan 52.3%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#ff8c42;"></span>Taiwan 33.3%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#7c4dff;"></span>Hongkong 4.2%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#4caf7d;"></span>Other 8.6%</div>
+            </div>
+          </div>
+
+          <!-- Insights -->
+          <div class="right-side">
+            <div class="insight-card fragment" data-fragment-index="1">
+              <h3>🇯🇵 일본 시장 압도적 1위</h3>
+              <div class="big-num"><em>52.3</em>%</div>
+              <p>전체 AREX 구매의 절반 이상. 일본어 UI/마케팅 우선 투자 근거.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="2">
+              <h3>🇹🇼 대만 시장 안정적 2위</h3>
+              <div class="big-num"><em>33.3</em>%</div>
+              <p>일본 + 대만 합산 85.6%로 양국 집중 전략이 유효.</p>
+            </div>
+            <div class="insight-card fragment" data-fragment-index="3">
+              <h3>📌 번들 패키지 기회</h3>
+              <p style="font-size:28px;">단순 교통권에서 <strong style="color:#fee600;">Arex + Bundle PKG</strong>로 업셀링 — 객단가 향상 전략 핵심.</p>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">도넛 차트로 국가 비중 설명. 인사이트 카드를 클릭으로 순서대로 등장.</aside>
+      </section>
+
+      <!-- ══ SLIDE 3 · AREX 상품 ═══════════════════════════ -->
+      <section class="slide s3" id="slide-2"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 3: AREX Product"
+               data-index="2" data-bg="#00c2cb"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">AREX 주요 상품 라인업</span>
+          </div>
+        </div>
+        <div class="content-grid">
+          <div class="product-card fragment" data-fragment-index="1">
+            <div class="p-badge">🚉 기본 상품</div>
+            <h3>인천공항 → 서울역<br>공항철도 편도</h3>
+            <div class="price">KRW 11,500 <small>~15,000</small></div>
+            <div class="tag-row">
+              <span class="tag-chip">SIM 14% 할인</span>
+              <span class="tag-chip">즉시 확정</span>
+              <span class="tag-chip">200K+ 예약</span>
+            </div>
+            <p>4.8점 Excellent · 당일 사용 가능 · No cancellation 정책으로 매출 안정성 확보</p>
+          </div>
+          <div class="product-card fragment" data-fragment-index="2">
+            <div class="p-badge" style="background:#fee600;color:#1a1a1a;">🎡 번들 PKG</div>
+            <h3>AREX 급행 +<br>롯데월드 종합이용권</h3>
+            <div class="price" style="color:#f59e0b;">KRW 45,300</div>
+            <div class="tag-row">
+              <span class="tag-chip">10% OFF</span>
+              <span class="tag-chip">2025-12-02~</span>
+            </div>
+            <p>교통 + 테마파크 결합으로 객단가 <strong style="color:#00c2cb;">4배 향상</strong>. 일본·대만 가족 여행자 타겟.</p>
+          </div>
+          <div class="product-card fragment" data-fragment-index="3">
+            <div class="p-badge" style="background:#4caf7d;">🐠 번들 PKG 2</div>
+            <h3>AREX 급행 +<br>SEA LIFE COEX 아쿠아리움</h3>
+            <div class="price" style="color:#4caf7d;">KRW 38,900</div>
+            <div class="tag-row">
+              <span class="tag-chip">5% OFF</span>
+              <span class="tag-chip">서울 대표 수족관</span>
+            </div>
+            <p>공항 도착 당일 바로 연계 가능한 완전한 여행 패키지. 체류 시간 극대화.</p>
+          </div>
+          <div class="product-card fragment" data-fragment-index="4">
+            <div class="p-badge" style="background:#7c4dff;">📱 Add-on</div>
+            <h3>eSIM / SIM 카드<br>패키지 연계 할인</h3>
+            <div class="price" style="color:#7c4dff;">14% OFF</div>
+            <div class="tag-row">
+              <span class="tag-chip">도착 즉시 사용</span>
+              <span class="tag-chip">Cross-sell</span>
+            </div>
+            <p>AREX 구매 시 SIM 번들 추가 유도. 기존 구매자 전환율 높은 크로스셀 상품.</p>
+          </div>
+        </div>
+        <aside class="notes">4개 상품 카드를 순서대로 소개합니다.</aside>
+      </section>
+
+      <!-- ══ SLIDE 4 · 번들 전략 ════════════════════════════ -->
+      <section class="slide s4" id="slide-3"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 4: Bundle Strategy"
+               data-index="3" data-bg="#009ba3"
+               aria-hidden="true">
+        <div class="kkday-header">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">Arex + Bundle PKG 전략</span>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:44px;">
+          <div style="text-align:center;">
+            <h2 style="font-size:72px;font-weight:900;color:#fff;">
+              교통권 → <em style="color:#fee600;">완전한 여행 경험</em>으로
+            </h2>
+          </div>
+          <div class="bundle-grid">
+            <div class="bundle-item fragment" data-fragment-index="1">
+              <div class="bundle-icon">🚉</div>
+              <h3>기본 교통권</h3>
+              <p>공항 → 서울역 단순 이동. 경쟁 상품 다수, 가격 경쟁 심화.</p>
+              <div class="bundle-arrow">현재 포지션 →</div>
+            </div>
+            <div class="bundle-item highlight fragment" data-fragment-index="2">
+              <div class="bundle-icon">✨</div>
+              <h3>AREX + Bundle PKG</h3>
+              <p>이동 + 관광 + 통신을 하나의 패키지로. 객단가 3~4배 향상, 경쟁 희소.</p>
+              <div class="bundle-arrow" style="color:#fee600;">▶ 핵심 전략</div>
+            </div>
+            <div class="bundle-item fragment" data-fragment-index="3">
+              <div class="bundle-icon">📈</div>
+              <h3>성장 방향성</h3>
+              <p>일본·대만 FIT 여행자 대상 "공항 도착 → 당일 즐길거리" 완결형 상품 확대.</p>
+              <div class="bundle-arrow">목표 상태 →</div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:center;gap:40px;">
+            <div class="fragment" data-fragment-index="4"
+                 style="background:rgba(254,230,0,0.15);border:2px solid #fee600;border-radius:14px;padding:24px 44px;text-align:center;">
+              <div style="font-size:48px;font-weight:900;color:#fee600;">KRW 11,500</div>
+              <div style="font-size:22px;color:rgba(255,255,255,0.7);">교통권 단독</div>
+            </div>
+            <div style="font-size:64px;color:rgba(255,255,255,0.5);line-height:1.4;" class="fragment" data-fragment-index="4">→</div>
+            <div class="fragment" data-fragment-index="4"
+                 style="background:rgba(254,230,0,0.25);border:2px solid #fee600;border-radius:14px;padding:24px 44px;text-align:center;">
+              <div style="font-size:48px;font-weight:900;color:#fee600;">KRW 45,300</div>
+              <div style="font-size:22px;color:rgba(255,255,255,0.7);">번들 PKG</div>
+            </div>
+            <div style="font-size:64px;color:rgba(255,255,255,0.5);line-height:1.4;" class="fragment" data-fragment-index="4">→</div>
+            <div class="fragment" data-fragment-index="4"
+                 style="background:rgba(0,245,224,0.2);border:2px solid #00f5e0;border-radius:14px;padding:24px 44px;text-align:center;">
+              <div style="font-size:48px;font-weight:900;color:#00f5e0;">+294%</div>
+              <div style="font-size:22px;color:rgba(255,255,255,0.7);">객단가 상승</div>
+            </div>
+          </div>
+        </div>
+        <aside class="notes">번들 전략의 핵심 논리를 단계별로 설명합니다. 마지막에 가격 비교로 임팩트를 줍니다.</aside>
+      </section>
+
+      <!-- ══ SLIDE 5 · Stats ═══════════════════════════════ -->
+      <section class="slide s5" id="slide-4"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 5: Key Numbers"
+               data-index="4" data-bg="#00c2cb"
+               aria-hidden="true">
+        <div class="kkday-header" style="width:100%;">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">Key Numbers</span>
+          </div>
+        </div>
+        <h2>AREX 핵심 <em>수치</em></h2>
+        <div class="stats-row">
+          <div class="stat-box fragment" data-fragment-index="1">
+            <div class="stat-num" data-count="52" data-suffix="%">0%</div>
+            <div class="stat-unit">일본 마켓</div>
+            <div class="stat-label">전체 구매 중 최대 비중 국가</div>
+          </div>
+          <div class="stat-box fragment" data-fragment-index="2">
+            <div class="stat-num" data-count="200" data-suffix="K+">0</div>
+            <div class="stat-unit">누적 예약</div>
+            <div class="stat-label">AREX 편도 상품 총 예약 수</div>
+          </div>
+          <div class="stat-box fragment" data-fragment-index="3">
+            <div class="stat-num" data-count="294" data-suffix="%">0%</div>
+            <div class="stat-unit">객단가 상승</div>
+            <div class="stat-label">번들 PKG 전환 시 증가율</div>
+          </div>
+          <div class="stat-box fragment" data-fragment-index="4">
+            <div class="stat-num" data-count="4" data-suffix="점">0</div>
+            <div class="stat-unit">4.8 Excellent</div>
+            <div class="stat-label">KKday 상품 평점 (5점 만점)</div>
+          </div>
+        </div>
+        <aside class="notes">4개 KPI를 순서대로 보여주며 카운트업 애니메이션이 실행됩니다.</aside>
+      </section>
+
+      <!-- ══ SLIDE 6 · KKday 카테고리 ══════════════════════ -->
+      <section class="slide s6" id="slide-5"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 6: KKday Categories"
+               data-index="5" data-bg="#00c2cb"
+               aria-hidden="true">
+        <div class="kkday-header" style="width:100%;">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+            <div class="header-divider"></div>
+            <span class="header-tagline">Find all your travel needs across different types of experiences</span>
+          </div>
+        </div>
+        <div style="text-align:center;margin-bottom:48px;">
+          <h2 style="font-size:72px;font-weight:900;color:#fee600;line-height:1.1;">
+            Locally curated experiences<br>in <em style="color:#fff;font-style:normal;">550+</em> cities
+          </h2>
+        </div>
+        <div class="cat-grid">
+          <div class="cat-item fragment" data-fragment-index="1">
+            <div class="cat-circle">🎈</div>
+            <div class="cat-name">Outdoor<br>Adventures</div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="2">
+            <div class="cat-circle">🌿</div>
+            <div class="cat-name">Eco<br>Tours</div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="3">
+            <div class="cat-circle">🍷</div>
+            <div class="cat-name">Tasting<br>Tours</div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="4">
+            <div class="cat-circle">🎡</div>
+            <div class="cat-name"><em>Attractions &<br>Theme Parks</em></div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="5">
+            <div class="cat-circle">🚆</div>
+            <div class="cat-name"><em>Transportation<br>Essentials</em></div>
+          </div>
+          <div class="cat-item fragment" data-fragment-index="6">
+            <div class="cat-circle">🎨</div>
+            <div class="cat-name">Hands-on<br>Classes</div>
+          </div>
+        </div>
+        <aside class="notes">KKday의 6개 카테고리를 순서대로 소개합니다. AREX는 Transportation Essentials에 해당합니다.</aside>
+      </section>
+
+      <!-- ══ SLIDE 7 · End ══════════════════════════════════ -->
+      <section class="slide s7" id="slide-6"
+               role="region" aria-roledescription="slide"
+               aria-label="Slide 7: Thank You"
+               data-index="6" data-bg="#009ba3"
+               aria-hidden="true">
+        <div style="margin-bottom:16px;">
+          <img class="kkday-logo-img size-xl" style="height:120px;" src="KKday_Logo_WhiteOnTransparent.png" alt="kkday">
+        </div>
+        <div class="tagline">Find all your travel needs across different types of experiences</div>
+        <div class="end-grid fragment" data-fragment-index="1">
+          <div class="end-pill accent">Japan 52.3%</div>
+          <div class="end-pill">Taiwan 33.3%</div>
+          <div class="end-pill">Bundle PKG +294%</div>
+          <div class="end-pill">550+ Cities</div>
+        </div>
+        <button class="restart-btn" onclick="presentation.goTo(0,'backward')">
+          ↺ &nbsp;처음으로
+        </button>
+        <aside class="notes">마무리 슬라이드. 핵심 수치를 요약하고 kkday 브랜드로 마무리합니다.</aside>
+      </section>
+
+    </div><!-- #frame -->
+  </div><!-- #viewport -->
+</main>
+
+<!-- Help modal -->
+<div id="help-modal" role="dialog" aria-modal="true" aria-label="키보드 단축키" hidden>
+  <div class="modal-box">
+    <h2>⌨️ 키보드 단축키</h2>
+    <table>
+      <tr><td><kbd>→</kbd> <kbd>Space</kbd></td><td>다음 / Fragment 등장</td></tr>
+      <tr><td><kbd>←</kbd></td><td>이전 / Fragment 되돌리기</td></tr>
+      <tr><td><kbd>Home</kbd></td><td>첫 번째 슬라이드</td></tr>
+      <tr><td><kbd>End</kbd></td><td>마지막 슬라이드</td></tr>
+      <tr><td><kbd>F</kbd></td><td>전체화면 토글</td></tr>
+      <tr><td><kbd>?</kbd> / <kbd>Esc</kbd></td><td>이 창 열기 / 닫기</td></tr>
+    </table>
+    <button class="modal-close" id="close-help">확인</button>
+  </div>
+</div>
+
+<script>
+/* ── Count-up ────────────────────────────────────────── */
+function countUp(el) {
+  const target = parseInt(el.dataset.count);
+  const suffix = el.dataset.suffix || '';
+  const duration = 1100;
+  const start = performance.now();
+  (function tick(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(e * target) + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  })(start);
+}
+
+/* ── Presentation ─────────────────────────────────────── */
+class Presentation {
+  constructor() {
+    this.slides   = [...document.querySelectorAll('.slide')];
+    this.total    = this.slides.length;
+    this.current  = 0;
+    this.isAnimating = false;
+    document.getElementById('tot').textContent = this.total;
+    this.init();
+  }
+  init() {
+    this.applyScale();
+    new ResizeObserver(() => this.applyScale()).observe(document.getElementById('viewport'));
+    const init = Math.min(Math.max(parseInt(location.hash.slice(1)) || 0, 0), this.total - 1);
+    this.goTo(init, 'none');
+    this.bindKeyboard();
+    this.bindPointer();
+    document.getElementById('btn-prev').addEventListener('click', () => this.prev());
+    document.getElementById('btn-next').addEventListener('click', () => this.next());
+    window.addEventListener('hashchange', () => {
+      const i = parseInt(location.hash.slice(1)) || 0;
+      if (i !== this.current) this.goTo(i, 'none');
+    });
+  }
+  applyScale() {
+    const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    document.getElementById('frame').style.transform = `scale(${scale})`;
+  }
+  goTo(index, dir = 'forward') {
+    if (index < 0 || index >= this.total) return;
+    if (this.isAnimating && dir !== 'none') return;
+    if (index === this.current && dir !== 'none') return;
+    this.isAnimating = true;
+    const prev = this.slides[this.current];
+    const next = this.slides[index];
+    prev.setAttribute('aria-hidden', 'true');
+    prev.classList.remove('present');
+    prev.classList.add(dir === 'backward' ? 'future' : 'past');
+    next.removeAttribute('aria-hidden');
+    next.classList.remove('past', 'future');
+    next.classList.add('present');
+    // count-up 트리거 (슬라이드 진입 시)
+    next.querySelectorAll('[data-count]').forEach(n => countUp(n));
+    this.current = index;
+    this.updateUI();
+    document.getElementById('slide-bg').style.backgroundColor =
+      this.slides[index].dataset.bg || '#00c2cb';
+    const unlock = () => { this.isAnimating = false; };
+    if (dir === 'none') { unlock(); return; }
+    const t = setTimeout(unlock, 750);
+    next.addEventListener('transitionend', e => {
+      if (e.propertyName === 'transform') { clearTimeout(t); unlock(); }
+    }, { once: true });
+    next.addEventListener('transitioncancel', () => { clearTimeout(t); unlock(); }, { once: true });
+  }
+  next() { this.goTo(this.current + 1, 'forward'); }
+  prev() { this.goTo(this.current - 1, 'backward'); }
+  updateUI() {
+    document.getElementById('cur').textContent = this.current + 1;
+    document.getElementById('progress-fill').style.transform =
+      `scaleX(${(this.current + 1) / this.total})`;
+    document.getElementById('sr-status').textContent = `슬라이드 ${this.current + 1} / ${this.total}`;
+    history.replaceState(null, '', `#${this.current}`);
+  }
+  bindKeyboard() {
+    document.addEventListener('keydown', e => {
+      const a = document.activeElement;
+      if (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown': case 'Enter':
+          e.preventDefault(); this.next(); break;
+        case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+          e.preventDefault(); this.prev(); break;
+        case 'Home': e.preventDefault(); this.goTo(0, 'backward'); break;
+        case 'End':  e.preventDefault(); this.goTo(this.total - 1, 'forward'); break;
+        case '?': toggleHelp(); break;
+        case 'Escape': closeHelp(); break;
+        case 'f': case 'F': toggleFullscreen(); break;
+      }
+    });
+  }
+  bindPointer() {
+    const el = document.getElementById('presentation');
+    let sx = 0, sy = 0, st = 0;
+    el.style.touchAction = 'none';
+    el.addEventListener('pointerdown', e => {
+      if (!e.isPrimary) return;
+      sx = e.clientX; sy = e.clientY; st = Date.now();
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointerup', e => {
+      if (!e.isPrimary) return;
+      const dx = sx - e.clientX, dy = sy - e.clientY;
+      const vel = Math.abs(dx) / Math.max(Date.now() - st, 1);
+      if (Math.abs(dx) > Math.abs(dy) && (Math.abs(dx) > 60 || vel > 0.25))
+        dx > 0 ? this.next() : this.prev();
+      el.releasePointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointercancel', e => el.releasePointerCapture(e.pointerId));
+  }
+}
+
+/* ── Help modal ───────────────────────────────────────── */
+function toggleHelp() {
+  document.getElementById('help-modal').hasAttribute('hidden') ? openHelp() : closeHelp();
+}
+function openHelp() {
+  const m = document.getElementById('help-modal');
+  m.removeAttribute('hidden');
+  document.getElementById('close-help').focus();
+}
+function closeHelp() { document.getElementById('help-modal').setAttribute('hidden', ''); }
+document.getElementById('close-help').addEventListener('click', closeHelp);
+document.getElementById('help-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeHelp();
+});
+
+/* ── Fullscreen ───────────────────────────────────────── */
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+  else document.exitFullscreen?.();
+}
+
+/* ── Boot ─────────────────────────────────────────────── */
+const presentation = new Presentation();
+</script>
+</body>
+</html>
