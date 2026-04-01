@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KR Outbound Products — Sales Analysis 2025</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --kkday-red: #E8192C;
+    --kkday-dark: #1A1A2E;
+    --kkday-navy: #16213E;
+    --kkday-blue: #0F3460;
+    --kkday-accent: #E94560;
+    --card-bg: #ffffff;
+    --bg: #F4F6FA;
+    --text: #1A1A2E;
+    --sub: #6B7280;
+    --border: #E5E7EB;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--kkday-dark) 0%, var(--kkday-blue) 60%, var(--kkday-accent) 100%);
+    color: white;
+    padding: 40px 48px 32px;
+  }
+  .header-top { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+  .kkday-logo { background: var(--kkday-red); color: white; font-weight: 900; font-size: 15px; padding: 5px 10px; border-radius: 4px; letter-spacing: 1px; }
+  .header h1 { font-size: 28px; font-weight: 700; }
+  .header .subtitle { color: rgba(255,255,255,0.7); font-size: 14px; margin-top: 4px; }
+
+  /* KPI Cards */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    padding: 28px 48px 0;
+  }
+  .kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-left: 4px solid transparent;
+  }
+  .kpi-card.red { border-color: var(--kkday-red); }
+  .kpi-card.blue { border-color: var(--kkday-blue); }
+  .kpi-card.green { border-color: #10B981; }
+  .kpi-card.orange { border-color: #F59E0B; }
+  .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--sub); }
+  .kpi-value { font-size: 26px; font-weight: 800; margin: 6px 0 2px; color: var(--text); }
+  .kpi-sub { font-size: 12px; color: var(--sub); }
+
+  /* Section */
+  .section { padding: 28px 48px; }
+  .section-title {
+    font-size: 16px; font-weight: 700; color: var(--kkday-dark);
+    margin-bottom: 18px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--kkday-red);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title .badge {
+    background: var(--kkday-red); color: white;
+    font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600;
+  }
+
+  /* Grid layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+  /* Card */
+  .card {
+    background: white; border-radius: 12px;
+    padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .card-title { font-size: 13px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th {
+    background: var(--kkday-dark); color: white;
+    padding: 10px 12px; text-align: left; font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .data-table th:first-child { border-radius: 6px 0 0 0; }
+  .data-table th:last-child { border-radius: 0 6px 0 0; }
+  .data-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #F9FAFB; }
+  .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .rank { display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%; font-size: 10px; font-weight: 800;
+    background: var(--kkday-dark); color: white; }
+  .rank.gold { background: #F59E0B; }
+  .rank.silver { background: #9CA3AF; }
+  .rank.bronze { background: #D97706; }
+
+  /* Bar inline */
+  .bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .bar-track { flex: 1; height: 6px; background: #F3F4F6; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; background: var(--kkday-red); }
+  .bar-pct { font-size: 11px; font-weight: 700; color: var(--sub); min-width: 38px; text-align: right; }
+
+  /* BD Cards */
+  .bd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .bd-card {
+    background: white; border-radius: 12px; padding: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    position: relative; overflow: hidden;
+  }
+  .bd-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  }
+  .bd-card.stella::before { background: linear-gradient(90deg, var(--kkday-red), var(--kkday-accent)); }
+  .bd-card.chris::before { background: linear-gradient(90deg, var(--kkday-blue), #4A90D9); }
+  .bd-name { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .bd-email { font-size: 12px; color: var(--sub); margin-bottom: 18px; }
+  .bd-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .bd-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sub); font-weight: 600; }
+  .bd-stat-value { font-size: 20px; font-weight: 800; margin-top: 2px; }
+  .bd-stat-value.red { color: var(--kkday-red); }
+  .bd-stat-value.blue { color: var(--kkday-blue); }
+  .bd-revenue-bar {
+    background: #F3F4F6; border-radius: 8px; height: 10px; overflow: hidden; margin-top: 4px;
+  }
+  .bd-revenue-fill { height: 100%; border-radius: 8px; transition: width 1s ease; }
+  .stella-fill { background: linear-gradient(90deg, var(--kkday-red), var(--kkday-accent)); }
+  .chris-fill { background: linear-gradient(90deg, var(--kkday-blue), #4A90D9); }
+  .bd-pct-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--sub); margin-top: 6px; }
+
+  /* Chart containers */
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap.tall { height: 360px; }
+
+  /* Margin pill */
+  .margin-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;
+    background: #ECFDF5; color: #065F46;
+  }
+
+  footer { text-align: center; padding: 24px; font-size: 12px; color: var(--sub); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-top">
+    <span class="kkday-logo">KKday</span>
+    <span style="color:rgba(255,255,255,0.5); font-size:13px;">KR Outbound</span>
+  </div>
+  <h1>Sales Performance Analysis 2025</h1>
+  <div class="subtitle">Market &amp; BD Performance Breakdown — 729 Products, 2 BDs</div>
+</div>
+
+<!-- KPI Row -->
+<div class="kpi-row">
+  <div class="kpi-card red">
+    <div class="kpi-label">Total Revenue</div>
+    <div class="kpi-value">1,497K</div>
+    <div class="kpi-sub">전체 매출 (USD)</div>
+  </div>
+  <div class="kpi-card blue">
+    <div class="kpi-label">Total GP</div>
+    <div class="kpi-value">144.5K</div>
+    <div class="kpi-sub">총 GP · Margin 9.65%</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-label">Total Orders</div>
+    <div class="kpi-value">23,954</div>
+    <div class="kpi-sub">총 주문 건수</div>
+  </div>
+  <div class="kpi-card orange">
+    <div class="kpi-label">Total Products</div>
+    <div class="kpi-value">729</div>
+    <div class="kpi-sub">활성 상품 수 · 17 마켓</div>
+  </div>
+</div>
+
+<!-- BD Overview -->
+<div class="section">
+  <div class="section-title">BD별 성과 <span class="badge">2 BDs</span></div>
+  <div class="bd-grid">
+    <!-- Stella -->
+    <div class="bd-card stella">
+      <div class="bd-name">Stella Lee</div>
+      <div class="bd-email">stella.lee@kkday.com</div>
+      <div class="bd-stats">
+        <div>
+          <div class="bd-stat-label">Revenue</div>
+          <div class="bd-stat-value red">951K</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">GP</div>
+          <div class="bd-stat-value">98K</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">Orders</div>
+          <div class="bd-stat-value">18,273</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">Products</div>
+          <div class="bd-stat-value blue">224</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">Margin</div>
+          <div class="bd-stat-value">10.3%</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">Share</div>
+          <div class="bd-stat-value red">63.6%</div>
+        </div>
+      </div>
+      <div class="bd-revenue-bar"><div class="bd-revenue-fill stella-fill" style="width:63.6%"></div></div>
+      <div class="bd-pct-label"><span>Revenue Share</span><span>63.6%</span></div>
+    </div>
+    <!-- Chris -->
+    <div class="bd-card chris">
+      <div class="bd-name">Chris Baik</div>
+      <div class="bd-email">chris.baik@kkday.com</div>
+      <div class="bd-stats">
+        <div>
+          <div class="bd-stat-label">Revenue</div>
+          <div class="bd-stat-value red">545K</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">GP</div>
+          <div class="bd-stat-value">46.5K</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">Orders</div>
+          <div class="bd-stat-value">5,681</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">Products</div>
+          <div class="bd-stat-value blue">505</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">Margin</div>
+          <div class="bd-stat-value">8.5%</div>
+        </div>
+        <div>
+          <div class="bd-stat-label">Share</div>
+          <div class="bd-stat-value blue">36.4%</div>
+        </div>
+      </div>
+      <div class="bd-revenue-bar"><div class="bd-revenue-fill chris-fill" style="width:36.4%"></div></div>
+      <div class="bd-pct-label"><span>Revenue Share</span><span>36.4%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- BD Charts -->
+<div class="section" style="padding-top:0">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">BD별 Revenue vs GP</div>
+      <div class="chart-wrap">
+        <canvas id="bdRevenueChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">BD별 Products 수 비교</div>
+      <div class="chart-wrap">
+        <canvas id="bdProductsChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Market Analysis -->
+<div class="section" style="padding-top:0">
+  <div class="section-title">마켓별 매출 현황 <span class="badge">17 Markets</span></div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Top Markets — Revenue Share (Donut)</div>
+      <div class="chart-wrap">
+        <canvas id="marketDonut"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">마켓별 Revenue Breakdown</div>
+      <div class="chart-wrap tall">
+        <canvas id="marketBar"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Market Table -->
+<div class="section" style="padding-top:0">
+  <div class="card">
+    <div class="card-title">마켓별 상세 현황</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>마켓 (Country)</th>
+          <th class="num">Revenue (USD)</th>
+          <th class="num">Revenue %</th>
+          <th class="num">GP (USD)</th>
+          <th class="num">Margin</th>
+          <th class="num">Orders</th>
+          <th class="num">Products</th>
+          <th>Revenue Bar</th>
+        </tr>
+      </thead>
+      <tbody id="marketTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BD Market Heatmap -->
+<div class="section" style="padding-top:0">
+  <div class="section-title">BD × 마켓별 Revenue 분포</div>
+  <div class="card">
+    <div class="chart-wrap tall">
+      <canvas id="bdMarketChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- BD Product Table -->
+<div class="section" style="padding-top:0">
+  <div class="section-title">BD별 상품 수 × 마켓 분포</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Stella Lee — 마켓별 Products</div>
+      <div class="chart-wrap">
+        <canvas id="stellaProductsChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Chris Baik — 마켓별 Products</div>
+      <div class="chart-wrap">
+        <canvas id="chrisProductsChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>KKday KR Outbound · Data: Sales by BD 2025 · Generated 2025</footer>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────
+const marketRevenue = {"Japan":571546,"TH":258608,"Taiwan":205752,"VN":116886,"China":112000,"North America":72836,"PH":30213,"LH Other":30168,"MY":26730,"Europe":26521,"SEA Others":15888,"ID":10556,"Multi":9755,"Hong Kong and Macau":9611,"Oceania":103,"SG":1,"Korea":0};
+const marketGP = {"Japan":60529,"TH":26064,"Taiwan":19448,"VN":9596,"China":6758,"North America":6484,"PH":2793,"LH Other":2885,"MY":2895,"Europe":2674,"SEA Others":1821,"ID":1114,"Multi":970,"Hong Kong and Macau":800,"Oceania":12,"SG":-294,"Korea":0};
+const marketMargin = {"Japan":10.59,"TH":10.08,"Taiwan":9.45,"VN":8.21,"China":6.03,"North America":8.9,"PH":9.24,"LH Other":9.56,"MY":10.83,"Europe":10.08,"SEA Others":11.46,"ID":10.55,"Multi":9.94,"Hong Kong and Macau":8.32,"Oceania":11.65,"SG":-29400,"Korea":0};
+const marketProducts = {"Japan":89,"TH":153,"Taiwan":37,"VN":116,"China":39,"North America":62,"PH":69,"LH Other":7,"MY":35,"Europe":57,"SEA Others":24,"ID":18,"Multi":10,"Hong Kong and Macau":7,"Oceania":1,"SG":1,"Korea":4};
+const marketOrders = {"Japan":7702,"TH":3715,"Taiwan":7925,"VN":1944,"China":931,"North America":416,"PH":253,"LH Other":125,"MY":204,"Europe":217,"SEA Others":171,"ID":72,"Multi":89,"Hong Kong and Macau":91,"Oceania":1,"SG":1,"Korea":97};
+
+const bdData = {
+  "Stella Lee": {revenue:951571, gp:97985, orders:18273, products:224, margin:10.3, pct:63.56},
+  "Chris Baik": {revenue:545603, gp:46564, orders:5681, products:505, margin:8.53, pct:36.44}
+};
+
+// BD × Market revenue (exact from data)
+const stellaMarket = {"Japan":555032,"TH":235786,"Taiwan":160753,"VN":0,"China":0,"North America":0,"PH":0,"LH Other":0,"MY":0,"Europe":0,"SEA Others":0,"ID":0,"Multi":0,"Hong Kong and Macau":0,"Oceania":0,"SG":0,"Korea":0};
+const chrisMarket  = {"Japan":16514,"TH":22822,"Taiwan":44999,"VN":116886,"China":112000,"North America":72836,"PH":30213,"LH Other":30168,"MY":26730,"Europe":26521,"SEA Others":15888,"ID":10556,"Multi":9755,"Hong Kong and Macau":9611,"Oceania":103,"SG":1,"Korea":0};
+
+// ─── UTILS ──────────────────────────────────────────────────────────
+const fmt = n => n >= 1000 ? (n/1000).toFixed(0)+'K' : n.toFixed(0);
+const fmtComma = n => n.toLocaleString();
+const totalRevenue = Object.values(marketRevenue).reduce((a,b)=>a+b,0);
+
+// Colors
+const KKRED = '#E8192C';
+const KKBLUE = '#0F3460';
+const PALETTE = ['#E8192C','#0F3460','#F59E0B','#10B981','#8B5CF6','#06B6D4','#F97316','#84CC16','#EC4899','#6366F1','#14B8A6','#EF4444','#3B82F6','#22C55E','#A855F7','#F43F5E','#0EA5E9'];
+
+// ─── BD REVENUE CHART ───────────────────────────────────────────────
+new Chart(document.getElementById('bdRevenueChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Stella Lee', 'Chris Baik'],
+    datasets: [
+      { label: 'Revenue', data: [951571, 545603], backgroundColor: [KKRED, KKBLUE], borderRadius: 6 },
+      { label: 'GP', data: [97985, 46564], backgroundColor: ['#FECACA', '#BFDBFE'], borderRadius: 6 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { beginAtZero: true, ticks: { callback: v => '$'+fmt(v) } }
+    }
+  }
+});
+
+// ─── BD PRODUCTS CHART ──────────────────────────────────────────────
+new Chart(document.getElementById('bdProductsChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Stella Lee (224)', 'Chris Baik (505)'],
+    datasets: [{
+      data: [224, 505],
+      backgroundColor: [KKRED, KKBLUE],
+      borderWidth: 3, borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} products (${(ctx.raw/729*100).toFixed(1)}%)` } }
+    }
+  }
+});
+
+// ─── MARKET DONUT ───────────────────────────────────────────────────
+const top8markets = Object.entries(marketRevenue).slice(0,8);
+const others = Object.entries(marketRevenue).slice(8).reduce((a,[,v])=>a+v,0);
+const donutLabels = [...top8markets.map(([k])=>k), 'Others'];
+const donutData = [...top8markets.map(([,v])=>v), others];
+
+new Chart(document.getElementById('marketDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: donutLabels,
+    datasets: [{ data: donutData, backgroundColor: PALETTE, borderWidth: 2, borderColor: '#fff' }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: $${fmtComma(ctx.raw)} (${(ctx.raw/totalRevenue*100).toFixed(1)}%)` } }
+    }
+  }
+});
+
+// ─── MARKET BAR ─────────────────────────────────────────────────────
+const mktKeys = Object.keys(marketRevenue).filter(k => marketRevenue[k] > 0);
+new Chart(document.getElementById('marketBar'), {
+  type: 'bar',
+  data: {
+    labels: mktKeys,
+    datasets: [
+      { label: 'Revenue', data: mktKeys.map(k=>marketRevenue[k]), backgroundColor: KKRED+'CC', borderRadius: 4 },
+      { label: 'GP', data: mktKeys.map(k=>Math.max(0,marketGP[k])), backgroundColor: KKBLUE+'99', borderRadius: 4 }
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { beginAtZero: true, ticks: { callback: v => '$'+fmt(v) } }
+    }
+  }
+});
+
+// ─── MARKET TABLE ───────────────────────────────────────────────────
+const tbody = document.getElementById('marketTableBody');
+const maxRev = Math.max(...Object.values(marketRevenue));
+Object.entries(marketRevenue).forEach(([country, rev], i) => {
+  const pct = (rev/totalRevenue*100).toFixed(1);
+  const gp = marketGP[country];
+  const margin = marketMargin[country];
+  const orders = marketOrders[country];
+  const products = marketProducts[country];
+  const barPct = (rev/maxRev*100).toFixed(1);
+  const rankClass = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+  const displayMargin = country === 'SG' ? 'N/A' : margin.toFixed(1)+'%';
+  tbody.innerHTML += `
+    <tr>
+      <td><span class="rank ${rankClass}">${i+1}</span></td>
+      <td><strong>${country}</strong></td>
+      <td class="num">$${fmtComma(rev)}</td>
+      <td class="num"><strong>${pct}%</strong></td>
+      <td class="num">$${fmtComma(gp)}</td>
+      <td class="num"><span class="margin-pill">${displayMargin}</span></td>
+      <td class="num">${fmtComma(orders)}</td>
+      <td class="num">${products}</td>
+      <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${barPct}%"></div></div><span class="bar-pct">${pct}%</span></div></td>
+    </tr>`;
+});
+
+// ─── BD × MARKET STACKED BAR ────────────────────────────────────────
+const activeMarkets = mktKeys;
+new Chart(document.getElementById('bdMarketChart'), {
+  type: 'bar',
+  data: {
+    labels: activeMarkets,
+    datasets: [
+      { label: 'Stella Lee', data: activeMarkets.map(k=>stellaMarket[k]||0), backgroundColor: KKRED+'DD', borderRadius: 4 },
+      { label: 'Chris Baik', data: activeMarkets.map(k=>chrisMarket[k]||0), backgroundColor: KKBLUE+'DD', borderRadius: 4 }
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${fmtComma(ctx.raw)}` } } },
+    scales: {
+      x: { stacked: true, beginAtZero: true, ticks: { callback: v => '$'+fmt(v) } },
+      y: { stacked: true }
+    }
+  }
+});
+
+// ─── STELLA PRODUCTS BY MARKET ──────────────────────────────────────
+const stellaProductsByMarket = {"Japan":78,"TH":120,"Taiwan":25,"Korea":1};
+const chrisProductsByMarket = {"VN":116,"TH":33,"China":39,"North America":62,"PH":69,"Europe":57,"Japan":11,"MY":35,"Taiwan":12,"SEA Others":24,"ID":18,"Multi":10,"Hong Kong and Macau":7,"LH Other":7,"Korea":3,"Oceania":1,"SG":1};
+
+new Chart(document.getElementById('stellaProductsChart'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(stellaProductsByMarket),
+    datasets: [{ data: Object.values(stellaProductsByMarket), backgroundColor: PALETTE, borderWidth: 2, borderColor: '#fff' }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'right', labels: { boxWidth: 10, font:{size:10} } } }
+  }
+});
+
+new Chart(document.getElementById('chrisProductsChart'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(chrisProductsByMarket),
+    datasets: [{ data: Object.values(chrisProductsByMarket), backgroundColor: PALETTE, borderWidth: 2, borderColor: '#fff' }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'right', labels: { boxWidth: 10, font:{size:10} } } }
+  }
+});
+</script>
+</body>
+</html>
