@@ -409,6 +409,28 @@
     }
 
     #pw-cancel:hover { color: var(--text); }
+
+    /* ── Loading state ── */
+    .loading-state {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; padding: 60px 0;
+      color: var(--muted); font-size: 14px;
+    }
+    .loading-spinner {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid rgba(0,194,203,0.2);
+      border-top-color: var(--teal);
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-state {
+      grid-column: 1 / -1;
+      text-align: center; padding: 48px 0;
+      color: var(--muted); font-size: 13px; line-height: 1.8;
+    }
+    .error-state a { color: var(--teal); }
   </style>
 </head>
 <body>
@@ -431,78 +453,10 @@
 
   <div class="section-label">Slide Decks</div>
   <div class="grid" id="grid">
-
-    <!-- ─────────────────────────────────────────
-         PROTECTED CARD example: data-pw = SHA-256 of your password
-         Current password: kkday2026
-         To change: run in browser console →
-           crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
-             .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-    ───────────────────────────────────────────── -->
-    <a class="card" href="busan-2026.html"
-       data-pw="1b42127e77dca38098f24f0f5ddaf39e8e034b4d9c5962ebb95df704c8322886">
-      <div class="badge-new">New</div>
-      <div class="card-thumb" style="background: linear-gradient(135deg, #009ba3 0%, #006e75 100%);">
-        🌊
-      </div>
-      <div class="card-body">
-        <div class="card-meta">
-          <span class="tag tag-teal">Business</span>
-          <span class="tag tag-yellow">2026</span>
-          <span class="tag tag-lock">🔒 Protected</span>
-          <span class="card-date">Mar 2026</span>
-        </div>
-        <div class="card-title">2026 KKday Busan Business Update</div>
-        <div class="card-desc">부산 시설사 및 관공서 대상 KKday 비즈니스 업데이트. 2022–2025 성과 리뷰 및 2026 전략.</div>
-        <div class="card-footer">
-          <div class="card-venue">📍 Busan, Korea</div>
-          <div class="card-arrow">↗</div>
-        </div>
-      </div>
-    </a>
-
-    <a class="card" href="busan-event.html"
-       data-pw="1b42127e77dca38098f24f0f5ddaf39e8e034b4d9c5962ebb95df704c8322886">
-      <div class="badge-new">Latest</div>
-      <div class="card-thumb" style="background: linear-gradient(135deg, #00b8c0 0%, #009ba3 60%, #006e75 100%);">
-        🌊
-      </div>
-      <div class="card-body">
-        <div class="card-meta">
-          <span class="tag tag-teal">Event</span>
-          <span class="tag tag-yellow">2026</span>
-          <span class="tag tag-lock">🔒 Protected</span>
-          <span class="card-date">Mar 26, 2026</span>
-        </div>
-        <div class="card-title">2026 KKday Poolside Evening</div>
-        <div class="card-desc">Partner appreciation evening at Lotte Hotel Busan — Aqua Haven. 60 guests, 4 partner awards, lucky draw.</div>
-        <div class="card-footer">
-          <div class="card-venue">📍 Busan, Korea</div>
-          <div class="card-arrow">↗</div>
-        </div>
-      </div>
-    </a>
-
-    <!-- Unprotected card — no data-pw attribute -->
-    <a class="card" href="arex-2025.html">
-      <div class="card-thumb" style="background: linear-gradient(135deg, #00c2cb 0%, #00b8c0 50%, #009ba3 100%);">
-        🚆
-      </div>
-      <div class="card-body">
-        <div class="card-meta">
-          <span class="tag tag-teal">Strategy</span>
-          <span class="tag tag-green">2025</span>
-          <span class="card-date">2025</span>
-        </div>
-        <div class="card-title">AREX Market Mix 2025</div>
-        <div class="card-desc">KKday market strategy and distribution mix analysis for the AREX partnership channel.</div>
-        <div class="card-footer">
-          <div class="card-venue">📊 Strategy Deck</div>
-          <div class="card-arrow">↗</div>
-        </div>
-      </div>
-    </a>
-
+    <div class="loading-state" id="loading">
+      <div class="loading-spinner"></div>
+      <span>Loading presentations…</span>
+    </div>
   </div>
 
   <footer>
@@ -527,9 +481,132 @@
 </div>
 
 <script>
-  // ── Deck count ──────────────────────────────────────────
-  const count = document.querySelectorAll('.card').length;
-  document.getElementById('deck-count').textContent = count + ' deck' + (count !== 1 ? 's' : '');
+  // ── Config ───────────────────────────────────────────────
+  const REPO  = 'nayajc/kkday-presentations';
+  const API   = `https://api.github.com/repos/${REPO}/contents/`;
+
+  // Tag color mapping
+  const TAG_COLORS = {
+    Business: 'tag-teal', Event: 'tag-teal', Strategy: 'tag-teal',
+    Product: 'tag-teal', Analytics: 'tag-teal', Guide: 'tag-teal',
+    '2026': 'tag-yellow', '2025': 'tag-green', '2024': 'tag-green',
+    Partner: 'tag-green', New: 'tag-yellow',
+  };
+  function tagColor(t) { return TAG_COLORS[t] || 'tag-teal'; }
+
+  // Default gradient palette for unknown files
+  const GRADIENTS = [
+    'linear-gradient(135deg, #00c2cb 0%, #006e75 100%)',
+    'linear-gradient(135deg, #009ba3 0%, #006e75 100%)',
+    'linear-gradient(135deg, #00b8c0 0%, #009ba3 100%)',
+    'linear-gradient(135deg, #1A1A2E 0%, #0F3460 100%)',
+    'linear-gradient(135deg, #0F3460 0%, #E94560 100%)',
+  ];
+
+  // Friendly title from filename
+  function fileToTitle(name) {
+    return name
+      .replace(/\.html$/i, '')
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  // ── Render a single card ─────────────────────────────────
+  function renderCard(filename, meta, idx) {
+    const href      = filename;
+    const title     = meta?.title  || fileToTitle(filename);
+    const desc      = meta?.desc   || 'KKday presentation — click to open.';
+    const tags      = meta?.tags   || ['Presentation'];
+    const venue     = meta?.venue  || '📊 Presentation';
+    const date      = meta?.date   || '';
+    const emoji     = meta?.emoji  || '📑';
+    const gradient  = meta?.gradient || GRADIENTS[idx % GRADIENTS.length];
+    const pw        = meta?.pw     || '';
+    const badge     = meta?.badge  || '';
+
+    const tagHTML = tags.map(t =>
+      `<span class="tag ${tagColor(t)}">${t}</span>`
+    ).join('');
+
+    const lockTag = pw ? `<span class="tag tag-lock">🔒 Protected</span>` : '';
+    const badgeHTML = badge ? `<div class="badge-new">${badge}</div>` : '';
+    const pwAttr = pw ? `data-pw="${pw}"` : '';
+
+    return `
+      <a class="card" href="${href}" ${pwAttr}>
+        ${badgeHTML}
+        <div class="card-thumb" style="background: ${gradient};">
+          ${emoji}
+        </div>
+        <div class="card-body">
+          <div class="card-meta">
+            ${tagHTML}
+            ${lockTag}
+            ${date ? `<span class="card-date">${date}</span>` : ''}
+          </div>
+          <div class="card-title">${title}</div>
+          <div class="card-desc">${desc}</div>
+          <div class="card-footer">
+            <div class="card-venue">${venue}</div>
+            <div class="card-arrow">↗</div>
+          </div>
+        </div>
+      </a>`;
+  }
+
+  // ── Fetch & render ───────────────────────────────────────
+  async function loadPresentations() {
+    const grid = document.getElementById('grid');
+
+    try {
+      // Fetch repo contents + manifest in parallel
+      const [repoRes, manifestRes] = await Promise.all([
+        fetch(API),
+        fetch('manifest.json')
+      ]);
+
+      const files    = await repoRes.json();
+      const manifest = manifestRes.ok ? await manifestRes.json() : { presentations: {} };
+      const meta     = manifest.presentations || {};
+
+      // Filter: only .html files, not index.html
+      const htmlFiles = files
+        .filter(f => f.type === 'file' && f.name.endsWith('.html') && f.name !== 'index.html')
+        .map(f => f.name);
+
+      // Sort: manifest-listed files first (in manifest order), then alphabetical
+      const manifestOrder = Object.keys(meta);
+      htmlFiles.sort((a, b) => {
+        const ai = manifestOrder.indexOf(a);
+        const bi = manifestOrder.indexOf(b);
+        if (ai !== -1 && bi !== -1) return ai - bi;
+        if (ai !== -1) return -1;
+        if (bi !== -1) return 1;
+        return a.localeCompare(b);
+      });
+
+      grid.innerHTML = htmlFiles
+        .map((name, i) => renderCard(name, meta[name], i))
+        .join('');
+
+      // Update deck count
+      document.getElementById('deck-count').textContent =
+        htmlFiles.length + ' deck' + (htmlFiles.length !== 1 ? 's' : '');
+
+      // Attach card click handlers
+      attachCardHandlers();
+
+    } catch (err) {
+      console.error(err);
+      grid.innerHTML = `
+        <div class="error-state">
+          프레젠테이션을 불러올 수 없습니다.<br>
+          <a href="https://github.com/${REPO}" target="_blank">GitHub에서 직접 확인하기 →</a>
+        </div>`;
+    }
+  }
+
+  loadPresentations();
 
   // ── SHA-256 via Web Crypto ──────────────────────────────
   async function sha256(str) {
@@ -610,7 +687,8 @@
   });
 
   // ── Card click intercept ────────────────────────────────
-  document.querySelectorAll('.card').forEach(card => {
+  function attachCardHandlers() {
+    document.querySelectorAll('.card').forEach(card => {
     card.addEventListener('click', e => {
       e.preventDefault();
       const href = card.getAttribute('href');
@@ -633,6 +711,7 @@
       openModal(href, hash, title);
     });
   });
+  } // end attachCardHandlers
 </script>
 </body>
 </html>

@@ -1,0 +1,63 @@
+{
+  "presentations": {
+    "busan-2026.html": {
+      "title": "2026 KKday Busan Business Update",
+      "desc": "부산 시설사 및 관공서 대상 KKday 비즈니스 업데이트. 2022–2025 성과 리뷰 및 2026 전략.",
+      "tags": ["Business", "2026"],
+      "venue": "📍 Busan, Korea",
+      "date": "Mar 2026",
+      "emoji": "🌊",
+      "gradient": "linear-gradient(135deg, #009ba3 0%, #006e75 100%)",
+      "pw": "1b42127e77dca38098f24f0f5ddaf39e8e034b4d9c5962ebb95df704c8322886",
+      "badge": "New"
+    },
+    "busan-event.html": {
+      "title": "2026 KKday Poolside Evening",
+      "desc": "Partner appreciation evening at Lotte Hotel Busan — Aqua Haven. 60 guests, 4 partner awards, lucky draw.",
+      "tags": ["Event", "2026"],
+      "venue": "📍 Busan, Korea",
+      "date": "Mar 26, 2026",
+      "emoji": "🌊",
+      "gradient": "linear-gradient(135deg, #00b8c0 0%, #009ba3 60%, #006e75 100%)",
+      "pw": "1b42127e77dca38098f24f0f5ddaf39e8e034b4d9c5962ebb95df704c8322886",
+      "badge": "Latest"
+    },
+    "arex-2025.html": {
+      "title": "AREX Market Mix 2025",
+      "desc": "KKday market strategy and distribution mix analysis for the AREX partnership channel.",
+      "tags": ["Strategy", "2025"],
+      "venue": "📊 Strategy Deck",
+      "date": "2025",
+      "emoji": "🚆",
+      "gradient": "linear-gradient(135deg, #00c2cb 0%, #00b8c0 50%, #009ba3 100%)"
+    },
+    "KKday_KTX_Wonder.html": {
+      "title": "KKday KTX Wonder",
+      "desc": "KTX Wonder 자동화 예약 시스템 — AI 기반 예약 자동화 및 파트너 연동 시스템 소개.",
+      "tags": ["Product", "2025"],
+      "venue": "🚄 KTX Wonder",
+      "date": "2025",
+      "emoji": "🚄",
+      "gradient": "linear-gradient(135deg, #1A1A2E 0%, #0F3460 60%, #E94560 100%)"
+    },
+    "kr-outbound-analysis.html": {
+      "title": "KR Outbound Sales Analysis 2025",
+      "desc": "Market & BD performance breakdown — 729 products, 2 BDs, 17 markets. Revenue, GP, and ratio analysis.",
+      "tags": ["Analytics", "2025"],
+      "venue": "📊 Sales Dashboard",
+      "date": "Apr 2025",
+      "emoji": "📈",
+      "gradient": "linear-gradient(135deg, #1A1A2E 0%, #E8192C 100%)",
+      "badge": "New"
+    },
+    "partner-guide.html": {
+      "title": "KKday Partner Guide",
+      "desc": "KKday 파트너 온보딩 가이드 — 플랫폼 소개, 상품 등록, 정산 프로세스 안내.",
+      "tags": ["Guide", "Partner"],
+      "venue": "📘 Partner Docs",
+      "date": "2025",
+      "emoji": "📘",
+      "gradient": "linear-gradient(135deg, #00c2cb 0%, #006e75 100%)"
+    }
+  }
+}
