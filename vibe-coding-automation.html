@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KKday · Vibe Coding Automation</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #009ba3;
+      font-family: Verdana, 'Segoe UI', sans-serif;
+    }
+    .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
+
+    #viewport { position: fixed; inset: 0; overflow: hidden; }
+    #frame { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: top left; }
+    #slide-bg { position: fixed; inset: 0; z-index: 0; transition: background-color 0.55s ease; pointer-events: none; }
+
+    .slide {
+      position: absolute; inset: 0;
+      opacity: 0; visibility: hidden;
+      transform: translateX(100%);
+      transition: transform 0.6s cubic-bezier(0.26,0.86,0.44,0.985), opacity 0.6s ease, visibility 0.6s;
+      will-change: transform, opacity;
+      display: flex; flex-direction: column;
+      padding: 72px 96px;
+      overflow: hidden;
+      color: white;
+    }
+    .slide.past   { transform: translateX(-100%); opacity: 0; visibility: hidden; }
+    .slide.present{ transform: translateX(0);     opacity: 1; visibility: visible; }
+    .slide.future { transform: translateX(100%);  opacity: 0; visibility: hidden; }
+
+    .kkday-logo-img { display: block; object-fit: contain; }
+    .kkday-logo-img.size-xl { height: 96px; }
+    .kkday-logo-img.size-sm { height: 48px; }
+
+    .kkday-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 44px; flex-shrink: 0; }
+    .header-divider { width: 2px; height: 40px; background: rgba(255,255,255,0.4); margin: 0 24px; }
+    .header-tagline { font-size: 26px; color: rgba(255,255,255,0.85); font-weight: 700; }
+    .header-right   { font-size: 24px; color: rgba(255,255,255,0.6); letter-spacing: 1px; }
+
+    /* ── Fragments: direction-aware ──────────────────── */
+    .fragment            { opacity:0; transform:translateY(28px);     animation:none; }
+    .fragment.frag-left  { transform:translateX(-80px) translateY(0); }
+    .fragment.frag-right { transform:translateX(80px)  translateY(0); }
+    .fragment.frag-pop   { transform:scale(0.5)        translateY(0); }
+
+    .slide.present .fragment            { animation:fragUp    0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
+    .slide.present .fragment.frag-left  { animation:fragLeft  0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
+    .slide.present .fragment.frag-right { animation:fragRight 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
+    .slide.present .fragment.frag-pop   { animation:fragPop   0.5s  cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+    @keyframes fragUp    { to{opacity:1;transform:translateY(0);} }
+    @keyframes fragLeft  { to{opacity:1;transform:translateX(0);} }
+    @keyframes fragRight { to{opacity:1;transform:translateX(0);} }
+    @keyframes fragPop   { to{opacity:1;transform:scale(1);} }
+
+    .slide.present [data-fragment-index="1"] { animation-delay:.10s; }
+    .slide.present [data-fragment-index="2"] { animation-delay:.25s; }
+    .slide.present [data-fragment-index="3"] { animation-delay:.40s; }
+    .slide.present [data-fragment-index="4"] { animation-delay:.55s; }
+    .slide.present [data-fragment-index="5"] { animation-delay:.70s; }
+    .slide.present [data-fragment-index="6"] { animation-delay:.85s; }
+    .slide.present [data-fragment-index="7"] { animation-delay:1.00s; }
+    .slide.present [data-fragment-index="8"] { animation-delay:1.15s; }
+
+    #progress { position:fixed;bottom:0;left:0;z-index:200;width:100%;height:5px;background:rgba(0,0,0,0.15); }
+    #progress-fill { height:100%;background:#fee600;transform-origin:left;transform:scaleX(0);transition:transform 0.35s ease; }
+    #counter { position:fixed;bottom:20px;right:44px;z-index:200;font-size:22px;color:rgba(255,255,255,0.55);font-variant-numeric:tabular-nums;pointer-events:none; }
+    .nav-btn { position:fixed;top:50%;z-index:200;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.15);color:rgba(255,255,255,0.7);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s,color 0.2s; }
+    .nav-btn:hover { background:rgba(0,0,0,0.3);color:#fff; }
+    #btn-prev { left:16px; } #btn-next { right:16px; }
+
+    #export-toolbar { position:fixed;top:20px;right:20px;z-index:300;display:flex;gap:10px;opacity:0;transition:opacity 0.3s;pointer-events:none; }
+    #export-toolbar:hover, body.show-toolbar #export-toolbar { opacity:1;pointer-events:auto; }
+    .export-btn { padding:8px 20px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.4);background:rgba(0,0,0,0.3);color:rgba(255,255,255,0.9);font-size:14px;font-weight:600;cursor:pointer;backdrop-filter:blur(6px);transition:background 0.2s,color 0.2s; }
+    .export-btn:hover { background:rgba(0,0,0,0.55);color:#fff; }
+    .export-btn:disabled { opacity:0.45;cursor:not-allowed; }
+    #help-hint { position:fixed;bottom:20px;left:44px;z-index:200;font-size:18px;color:rgba(255,255,255,0.35);pointer-events:none; }
+    aside.notes { display:none; }
+    *, *::before, *::after { -webkit-print-color-adjust:exact;print-color-adjust:exact; }
+
+    /* ═══ LAYOUT: TITLE ═══ */
+    .layout-title { align-items:center;justify-content:center;text-align:center; }
+    .layout-title .eyebrow { font-size:24px;letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:28px;font-weight:500; }
+    .layout-title h1 { font-size:90px;font-weight:900;line-height:1.05;color:#fff;letter-spacing:-2px;margin-bottom:20px; }
+    .layout-title h1 em { color:#fee600;font-style:normal; }
+    .layout-title .sub { font-size:32px;color:rgba(255,255,255,0.75);font-weight:400;margin-bottom:48px; }
+    .meta-row { display:flex;gap:32px;align-items:center;justify-content:center;flex-wrap:wrap; }
+    .meta-pill { background:rgba(0,0,0,0.18);border-radius:100px;padding:14px 36px;font-size:24px;font-weight:700;color:#fff; }
+    .meta-pill.yellow { background:#fee600;color:#1a1a1a; }
+
+    /* ═══ LAYOUT: SECTION ═══ */
+    .layout-section { align-items:center;justify-content:center;text-align:center; }
+    .layout-section .part-num { font-size:20px;letter-spacing:6px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:20px;font-weight:600; }
+    .layout-section .part-icon { font-size:80px;margin-bottom:28px; }
+    .layout-section h2 { font-size:80px;font-weight:900;color:#fff;line-height:1.1;margin-bottom:20px; }
+    .layout-section h2 em { color:#fee600;font-style:normal; }
+    .layout-section .part-sub { font-size:28px;color:rgba(255,255,255,0.65); }
+
+    /* ═══ LAYOUT: TWO-COL ═══ */
+    .layout-two-col .content-area { display:flex;flex:1;gap:72px;align-items:center; }
+    .layout-two-col .left-side { flex:0 0 600px;display:flex;flex-direction:column;align-items:center;gap:28px; }
+    .layout-two-col .right-side { flex:1;display:flex;flex-direction:column;justify-content:center;gap:24px; }
+
+    .insight-card { background:rgba(0,0,0,0.15);border-radius:18px;padding:32px 36px;border-left:5px solid #fee600; }
+    .insight-card h3 { font-size:28px;font-weight:800;color:#fee600;margin-bottom:10px; }
+    .insight-card p { font-size:24px;color:rgba(255,255,255,0.85);line-height:1.55; }
+    .insight-card .big-num { font-size:64px;font-weight:900;color:#fff;line-height:1; }
+    .insight-card .big-num em { color:#fee600;font-style:normal; }
+
+    /* ═══ LAYOUT: BUNDLE (3-col) ═══ */
+    .layout-bundle .bundle-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;flex:1; }
+    .bundle-item { background:rgba(0,0,0,0.15);border-radius:20px;padding:44px 36px;display:flex;flex-direction:column;gap:18px;border-top:4px solid rgba(255,255,255,0.35); }
+    .bundle-item.highlight { border-top-color:#fee600;background:rgba(254,230,0,0.1); }
+    .bundle-item.active-now { border-top-color:#6ee7b7;background:rgba(110,231,183,0.1); }
+    .bundle-icon { font-size:52px; }
+    .bundle-item h3 { font-size:28px;font-weight:800;color:#fff;line-height:1.3; }
+    .bundle-item p { font-size:21px;color:rgba(255,255,255,0.75);line-height:1.6;flex:1; }
+    .bundle-tag { display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,0.2);border-radius:100px;padding:6px 18px;font-size:18px;font-weight:700;color:rgba(255,255,255,0.85);align-self:flex-start; }
+    .bundle-tag.done { background:rgba(16,185,129,0.25);color:#6ee7b7; }
+    .bundle-tag.wip  { background:rgba(254,230,0,0.25);color:#fee600; }
+
+    /* ═══ LAYOUT: CARDS 2×2 ═══ */
+    .layout-cards .content-grid { display:grid;grid-template-columns:1fr 1fr;gap:40px;flex:1; }
+    .kk-card { background:#fff;border-radius:20px;padding:40px;box-shadow:0 8px 32px rgba(0,0,0,0.12);display:flex;flex-direction:column;gap:16px; }
+    .kk-card .card-badge { display:inline-flex;align-items:center;gap:10px;background:#00c2cb;color:#fff;padding:8px 20px;border-radius:100px;font-size:20px;font-weight:700;align-self:flex-start; }
+    .kk-card h3 { font-size:28px;font-weight:800;color:#1a1a1a;line-height:1.3; }
+    .kk-card p { font-size:21px;color:#555;line-height:1.6;flex:1; }
+    .tag-row { display:flex;gap:8px;flex-wrap:wrap; }
+    .tag-chip { background:#f0fafb;border:1.5px solid #c0e8ea;color:#00717a;padding:6px 16px;border-radius:100px;font-size:17px;font-weight:600; }
+
+    /* ═══ ANALOGY SIDE-BY-SIDE ═══ */
+    .analogy-grid { display:grid;grid-template-columns:1fr 80px 1fr;gap:0;flex:1;align-items:center; }
+    .analogy-box { border-radius:24px;padding:52px 44px;display:flex;flex-direction:column;gap:20px; }
+    .analogy-box.order { background:rgba(0,0,0,0.2);border:2px solid rgba(255,255,255,0.2); }
+    .analogy-box.build { background:rgba(254,230,0,0.12);border:2px solid rgba(254,230,0,0.5); }
+    .analogy-icon { font-size:72px;text-align:center; }
+    .analogy-title { font-size:36px;font-weight:900;color:#fff;text-align:center;margin-bottom:6px; }
+    .analogy-box.build .analogy-title { color:#fee600; }
+    .analogy-sub { font-size:22px;color:rgba(255,255,255,0.65);text-align:center; }
+    .analogy-list { list-style:none;display:flex;flex-direction:column;gap:12px;margin-top:4px; }
+    .analogy-list li { font-size:21px;color:rgba(255,255,255,0.82);line-height:1.5;padding-left:22px;position:relative; }
+    .analogy-list li::before { content:'•';position:absolute;left:0;color:rgba(255,255,255,0.4); }
+    .analogy-box.build .analogy-list li::before { color:#fee600; }
+    .vs-divider { display:flex;align-items:center;justify-content:center; }
+    .vs-circle { width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff; }
+
+    /* ═══ TOOLS GRID ═══ */
+    .tools-grid { display:grid;grid-template-columns:1fr 1fr;gap:36px;flex:1; }
+    .tool-card { background:rgba(0,0,0,0.15);border-radius:22px;padding:40px 40px;display:flex;gap:28px;align-items:flex-start;border-left:5px solid rgba(255,255,255,0.3); }
+    .tool-card.teal { border-color:#00e0eb; }
+    .tool-card.yellow { border-color:#fee600; }
+    .tool-card.green { border-color:#6ee7b7; }
+    .tool-card.white { border-color:rgba(255,255,255,0.6); }
+    .tool-icon { font-size:56px;flex-shrink:0;line-height:1; }
+    .tool-info { flex:1; }
+    .tool-name { font-size:30px;font-weight:900;color:#fff;margin-bottom:6px; }
+    .tool-name em { color:#fee600;font-style:normal; }
+    .tool-role { font-size:18px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px; }
+    .tool-desc { font-size:21px;color:rgba(255,255,255,0.78);line-height:1.6; }
+
+    /* ═══ BOT DETAILS ═══ */
+    .bot-detail { display:flex;flex:1;gap:80px;align-items:center; }
+    .bot-left { flex:0 0 520px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:24px; }
+    .bot-big-icon { font-size:120px;line-height:1; }
+    .bot-status-badge { background:rgba(16,185,129,0.25);border:2px solid #6ee7b7;color:#6ee7b7;padding:12px 36px;border-radius:100px;font-size:24px;font-weight:700; }
+    .bot-status-badge.wip { background:rgba(254,230,0,0.2);border-color:#fee600;color:#fee600; }
+    .bot-right { flex:1;display:flex;flex-direction:column;gap:24px; }
+    .bot-step { background:rgba(0,0,0,0.18);border-radius:16px;padding:28px 32px;display:flex;gap:20px;align-items:flex-start; }
+    .step-num { width:44px;height:44px;border-radius:50%;background:#00c2cb;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;flex-shrink:0; }
+    .step-text h4 { font-size:24px;font-weight:800;color:#fff;margin-bottom:4px; }
+    .step-text p  { font-size:20px;color:rgba(255,255,255,0.7);line-height:1.5; }
+
+    /* ═══ FLOW DIAGRAM (Bot 3) ═══ */
+    .flow-wrap { display:flex;flex:1;align-items:center;justify-content:center;gap:0; }
+    .flow-step { display:flex;flex-direction:column;align-items:center;gap:16px;flex:1; }
+    .flow-box { background:rgba(0,0,0,0.2);border-radius:18px;padding:28px 20px;text-align:center;border:2px solid rgba(255,255,255,0.2);width:100%;display:flex;flex-direction:column;align-items:center;gap:12px; }
+    .flow-box.yellow { border-color:#fee600;background:rgba(254,230,0,0.1); }
+    .flow-box.green  { border-color:#6ee7b7;background:rgba(110,231,183,0.1); }
+    .flow-box.teal   { border-color:#00e0eb;background:rgba(0,224,235,0.1); }
+    .flow-icon { font-size:48px;line-height:1; }
+    .flow-label { font-size:22px;font-weight:800;color:#fff;line-height:1.3; }
+    .flow-box.yellow .flow-label { color:#fee600; }
+    .flow-box.green  .flow-label { color:#6ee7b7; }
+    .flow-desc { font-size:17px;color:rgba(255,255,255,0.65);line-height:1.5; }
+    .flow-arrow { display:flex;align-items:center;font-size:36px;color:rgba(255,255,255,0.4);flex-shrink:0;padding:0 8px; }
+    .flow-step-num { width:32px;height:32px;border-radius:50%;background:#fee600;color:#1a1a1a;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center; }
+
+    /* ═══ LAYOUT: END ═══ */
+    .layout-end { align-items:center;justify-content:center;text-align:center; }
+    .layout-end .tagline { font-size:32px;color:rgba(255,255,255,0.8);margin-bottom:52px;font-weight:400;line-height:1.5; }
+    .end-grid { display:flex;gap:28px;margin-bottom:52px;flex-wrap:wrap;justify-content:center; }
+    .end-pill { background:rgba(0,0,0,0.18);border-radius:100px;padding:16px 40px;font-size:24px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,0.25); }
+    .end-pill.accent { background:#fee600;color:#1a1a1a;border-color:#fee600; }
+    .restart-btn { padding:20px 60px;border-radius:100px;background:rgba(0,0,0,0.2);border:3px solid rgba(255,255,255,0.4);color:#fff;font-size:24px;font-weight:700;cursor:pointer;transition:background 0.2s,border-color 0.2s; }
+    .restart-btn:hover { background:rgba(0,0,0,0.35);border-color:#fff; }
+
+    /* ── Title slide: floating particles ─────────────── */
+    .particle { position:absolute; border-radius:50%; pointer-events:none; opacity:0; }
+    @keyframes floatParticle {
+      0%   { opacity:0;    transform:translateY(0)     scale(1); }
+      15%  { opacity:0.25; }
+      85%  { opacity:0.15; }
+      100% { opacity:0;    transform:translateY(-960px) scale(0.4); }
+    }
+
+    /* ── Section icon spin-in ─────────────────────────── */
+    .layout-section .part-icon { display:inline-block; }
+    .slide.present .layout-section .part-icon {
+      animation: iconBounce 0.9s cubic-bezier(0.34,1.56,0.64,1) 0.1s both;
+    }
+    .slide.present .layout-section .part-num {
+      animation: fragUp 0.4s ease 0s both;
+    }
+    .slide.present .layout-section h2 {
+      animation: fragUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.25s both;
+      opacity:0;
+    }
+    .slide.present .layout-section .part-sub {
+      animation: fragUp 0.5s ease 0.5s both;
+      opacity:0;
+    }
+    @keyframes iconBounce {
+      from { opacity:0; transform:rotate(-20deg) scale(0.3); }
+      to   { opacity:1; transform:rotate(0deg)   scale(1); }
+    }
+
+    /* ── Pulsing live badge ───────────────────────────── */
+    .bot-status-badge:not(.wip) {
+      animation: pulseLive 2.2s ease-in-out infinite;
+    }
+    @keyframes pulseLive {
+      0%,100% { box-shadow:0 0 0 0   rgba(110,231,183,0.5); }
+      50%     { box-shadow:0 0 0 14px rgba(110,231,183,0); }
+    }
+    .bundle-tag.done {
+      animation: pulseDone 3s ease-in-out infinite;
+    }
+    @keyframes pulseDone {
+      0%,100% { box-shadow:0 0 0 0  rgba(110,231,183,0.4); }
+      50%     { box-shadow:0 0 0 8px rgba(110,231,183,0); }
+    }
+
+    /* ── Animated flow arrows ─────────────────────────── */
+    .flow-arrow-inner {
+      display:inline-block;
+      animation: arrowBounce 1.6s ease-in-out infinite;
+    }
+    @keyframes arrowBounce {
+      0%,100% { transform:translateX(0);   color:rgba(255,255,255,0.35); }
+      50%     { transform:translateX(10px);color:#fee600; }
+    }
+
+    /* ── Bot step connector line ──────────────────────── */
+    .bot-right { position:relative; }
+    .bot-right::before {
+      content:'';
+      position:absolute; left:21px; top:22px; bottom:22px; width:2px;
+      background:linear-gradient(180deg, transparent, rgba(0,194,203,0.5) 20%, rgba(0,194,203,0.5) 80%, transparent);
+      opacity:0; transition:opacity 0.8s 0.5s;
+    }
+    .slide.present .bot-right::before { opacity:1; }
+
+    /* ── Typing cursor on subtitle ────────────────────── */
+    .type-cursor::after {
+      content:'|'; color:#fee600; margin-left:2px;
+      animation:blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+    /* ── Shimmer on yellow pills ──────────────────────── */
+    .meta-pill.yellow { position:relative; overflow:hidden; }
+    .meta-pill.yellow::after {
+      content:''; position:absolute; top:0; left:-100%; width:50%; height:100%;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent);
+      animation:shimmer 3s ease infinite 1.8s;
+    }
+    @keyframes shimmer { to{left:200%;} }
+
+    /* ── Number count flash ───────────────────────────── */
+    @keyframes numFlash {
+      0%   { color:#fff; text-shadow:none; transform:scale(1); }
+      40%  { color:#fee600; text-shadow:0 0 30px rgba(254,230,0,0.9); transform:scale(1.25); }
+      100% { color:#fff; text-shadow:none; transform:scale(1); }
+    }
+
+    /* ── Runner row hover ─────────────────────────────── */
+    .runner-row { transition:background 0.2s, transform 0.2s; }
+    .runner-row:hover { background:rgba(0,0,0,0.35)!important; transform:translateX(6px); }
+
+    /* ── Card hover lift ──────────────────────────────── */
+    .tool-card { transition:transform 0.2s, background 0.2s; }
+    .tool-card:hover { transform:translateY(-4px); background:rgba(0,0,0,0.22); }
+    .kk-card { transition:transform 0.2s, box-shadow 0.2s; }
+    .kk-card:hover { transform:translateY(-5px); box-shadow:0 16px 40px rgba(0,0,0,0.18); }
+    .analogy-box { transition:transform 0.25s; }
+    .analogy-box:hover { transform:translateY(-4px); }
+    .bundle-item { transition:transform 0.2s, background 0.2s; }
+    .bundle-item:hover { transform:translateY(-4px); }
+    .bot-step { transition:background 0.2s, transform 0.2s; }
+    .bot-step:hover { background:rgba(0,0,0,0.28); transform:translateX(4px); }
+    .flow-box { transition:transform 0.2s, box-shadow 0.2s; }
+    .flow-box:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(0,0,0,0.2); }
+
+    /* ── Section em glow ──────────────────────────────── */
+    .layout-section h2 em { text-shadow:0 0 40px rgba(254,230,0,0.6); }
+
+    /* ── Slide-in title h1 ────────────────────────────── */
+    .slide.present.layout-title h1 {
+      animation: titleDrop 0.8s cubic-bezier(0.22,1,0.36,1) 0.05s both;
+    }
+    .slide.present.layout-title .eyebrow {
+      animation: fragUp 0.5s ease 0s both;
+    }
+    .slide.present.layout-title .sub {
+      animation: fragUp 0.5s ease 0.3s both; opacity:0;
+    }
+    @keyframes titleDrop {
+      from { opacity:0; transform:translateY(-40px) scale(0.95); }
+      to   { opacity:1; transform:translateY(0)     scale(1); }
+    }
+
+    /* Print */
+    @media print {
+      @page { size:338.67mm 190.5mm;margin:0; }
+      html, body { width:1920px;height:auto;overflow:visible;background:transparent; }
+      #viewport { display:block;position:static;height:auto;width:1920px; }
+      #frame { position:static!important;transform:none!important;width:1920px!important;height:auto; }
+      .slide { position:relative!important;opacity:1!important;visibility:visible!important;transform:none!important;width:1920px;height:1080px;page-break-after:always;page-break-inside:avoid;display:flex; }
+      #slide-bg,#progress,#counter,#help-hint,.nav-btn,#export-toolbar { display:none!important; }
+      .fragment { opacity:1!important;transform:none!important;animation:none!important; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="sr-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="slide-bg" aria-hidden="true"></div>
+<div id="progress" aria-hidden="true"><div id="progress-fill"></div></div>
+<div id="counter" aria-hidden="true"><span id="cur">1</span> / <span id="tot">12</span></div>
+<div id="help-hint" aria-hidden="true">← → Navigate</div>
+<button class="nav-btn" id="btn-prev" aria-label="Previous">&#8592;</button>
+<button class="nav-btn" id="btn-next" aria-label="Next">&#8594;</button>
+<div id="export-toolbar">
+  <button class="export-btn" id="btn-pdf"  onclick="exportPDF()"  title="PDF">📄 PDF</button>
+  <button class="export-btn" id="btn-pptx" onclick="exportPPTX()" title="PPTX">📊 PPTX</button>
+</div>
+
+<main id="presentation" role="application" aria-roledescription="presentation" tabindex="0">
+ <div id="viewport">
+  <div id="frame">
+
+  <!-- ══ SLIDE 1 · TITLE ══════════════════════════════════════ -->
+  <section class="slide layout-title" id="slide-0"
+           role="region" aria-label="Slide 1"
+           data-index="0" data-bg="#00c2cb">
+    <div style="position:absolute;top:48px;left:88px;">
+      <img class="kkday-logo-img size-xl" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+    </div>
+    <div class="eyebrow">KKday Internal · Operations Team</div>
+    <h1><em>Vibe Coding</em><br>Automation</h1>
+    <div class="sub type-cursor">Building Smart Tools so Repetitive Work Runs Itself</div>
+    <div class="meta-row fragment" data-fragment-index="1">
+      <div class="meta-pill yellow">🍽️ AI as a Service</div>
+      <div class="meta-pill">→</div>
+      <div class="meta-pill yellow">🔧 Build Your Own Kitchen</div>
+    </div>
+    <div style="margin-top:40px;font-size:22px;color:rgba(255,255,255,0.5);" class="fragment" data-fragment-index="2">
+      Case Study: Blueline Train Bot · Busan Sky Capsule &amp; Beach Train
+    </div>
+    <div style="position:absolute;bottom:48px;left:0;right:0;text-align:center;font-size:24px;color:rgba(255,255,255,0.55);letter-spacing:2px;font-weight:500;" class="fragment" data-fragment-index="3">
+      JC Song
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 2 · AI vs VIBE CODING ═════════════════════════ -->
+  <section class="slide" id="slide-1"
+           role="region" aria-label="Slide 2"
+           data-index="1" data-bg="#00b8c0" aria-hidden="true">
+    <div class="kkday-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+        <div class="header-divider"></div>
+        <span class="header-tagline">Two Ways to Use AI</span>
+      </div>
+      <span class="header-right">Part 1 · The Big Idea</span>
+    </div>
+
+    <div class="analogy-grid">
+      <!-- LEFT: Order food -->
+      <div class="analogy-box order fragment frag-left" data-fragment-index="1">
+        <div class="analogy-icon">🍽️</div>
+        <div class="analogy-title">Ordering at a Restaurant</div>
+        <div class="analogy-sub">Using AI directly (ChatGPT, Claude…)</div>
+        <ul class="analogy-list">
+          <li>Every request costs tokens (money)</li>
+          <li>Great for one-time questions</li>
+          <li>You depend on the restaurant being open</li>
+          <li>Same question tomorrow → pay again</li>
+          <li>You get slightly different result every time</li>
+        </ul>
+      </div>
+
+      <!-- DIVIDER -->
+      <div class="vs-divider fragment frag-pop" data-fragment-index="2">
+        <div class="vs-circle">VS</div>
+      </div>
+
+      <!-- RIGHT: Build a kitchen -->
+      <div class="analogy-box build fragment frag-right" data-fragment-index="3">
+        <div class="analogy-icon">👨‍🍳</div>
+        <div class="analogy-title">Building Your Own Kitchen</div>
+        <div class="analogy-sub">Vibe Coding — create the tool once</div>
+        <ul class="analogy-list">
+          <li>Pay once to build; then it's free to run</li>
+          <li>Runs automatically, 24 / 7</li>
+          <li>Fully customised to your exact workflow</li>
+          <li>Same task tomorrow → zero extra cost</li>
+          <li>You own the recipe — improve it any time</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="margin-top:28px;text-align:center;font-size:24px;color:rgba(255,255,255,0.7);" class="fragment" data-fragment-index="4">
+      💡 Vibe Coding = <strong style="color:#fee600;">describing what you want in natural language</strong> → AI writes the code → you run &amp; refine it
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 3 · TOOLS / INGREDIENTS ═══════════════════════ -->
+  <section class="slide layout-bundle" id="slide-2"
+           role="region" aria-label="Slide 3"
+           data-index="2" data-bg="#009ba3" aria-hidden="true">
+    <div class="kkday-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+        <div class="header-divider"></div>
+        <span class="header-tagline">What You Need in Your Kitchen</span>
+      </div>
+      <span class="header-right">Part 1 · Ingredients</span>
+    </div>
+
+    <div class="tools-grid">
+      <div class="tool-card teal fragment frag-left" data-fragment-index="1">
+        <div class="tool-icon">🧑‍💻</div>
+        <div class="tool-info">
+          <div class="tool-role">The Workstation</div>
+          <div class="tool-name"><em>VS Code</em></div>
+          <div class="tool-desc">Where you write (or let AI write) the code. Free, fast, runs on any laptop. Think of it as the kitchen counter.</div>
+        </div>
+      </div>
+      <div class="tool-card yellow fragment frag-right" data-fragment-index="2">
+        <div class="tool-icon">⚙️</div>
+        <div class="tool-info">
+          <div class="tool-role">The Engine</div>
+          <div class="tool-name"><em>Node.js</em> + JavaScript</div>
+          <div class="tool-desc">The language the bots speak. Node.js lets JavaScript run on your machine (or server) — not just inside a browser.</div>
+        </div>
+      </div>
+      <div class="tool-card green fragment frag-left" data-fragment-index="3">
+        <div class="tool-icon">🤖</div>
+        <div class="tool-info">
+          <div class="tool-role">The Robot Arms</div>
+          <div class="tool-name"><em>Playwright</em></div>
+          <div class="tool-desc">Opens a real browser, clicks buttons, fills forms, and reads pages — exactly like a human, but at machine speed.</div>
+        </div>
+      </div>
+      <div class="tool-card white fragment frag-right" data-fragment-index="4">
+        <div class="tool-icon">📊</div>
+        <div class="tool-info">
+          <div class="tool-role">The Pantry / Logbook</div>
+          <div class="tool-name"><em>Google Sheets</em></div>
+          <div class="tool-desc">Stores all the data: what to do, what was done, and what succeeded or failed. The team can see everything in real time.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 4 · SECTION: BLUELINE BOT FAMILY ══════════════ -->
+  <section class="slide layout-section" id="slide-3"
+           role="region" aria-label="Slide 4"
+           data-index="3" data-bg="#006e74" aria-hidden="true">
+    <div class="part-num">Part 2</div>
+    <div class="part-icon">🚡</div>
+    <h2>The Blueline<br><em>Bot Family</em></h2>
+    <div class="part-sub">Sky Capsule &amp; Beach Train · Busan</div>
+  </section>
+
+  <!-- ══ SLIDE 5 · WHY SPLIT INTO 3 BOTS ═════════════════════ -->
+  <section class="slide layout-bundle" id="slide-4"
+           role="region" aria-label="Slide 5"
+           data-index="4" data-bg="#00b8c0" aria-hidden="true">
+    <div class="kkday-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+        <div class="header-divider"></div>
+        <span class="header-tagline">The 3-Bot Strategy</span>
+      </div>
+      <span class="header-right">Part 2 · Architecture</span>
+    </div>
+
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:26px;color:rgba(255,255,255,0.75);line-height:1.6;">
+        🍳 In cooking: one chef does everything = chaos and mistakes.<br>
+        <strong style="color:#fee600;">Split the job</strong> → Prep cook · Line cook · Plating — each focused, each verifiable.
+      </div>
+    </div>
+
+    <div class="bundle-grid">
+      <div class="bundle-item active-now fragment frag-pop" data-fragment-index="1">
+        <div class="bundle-icon">🗃️</div>
+        <h3>Bot 1<br>Inventory Mining</h3>
+        <p>Automatically reserves Sky Capsule time slots for upcoming dates. Runs on schedule via GitHub Actions — 16 parallel instances in VM and self hosted runner (Macbook in KR).</p>
+        <div class="bundle-tag done">✅ Running</div>
+      </div>
+      <div class="bundle-item active-now fragment frag-pop" data-fragment-index="2">
+        <div class="bundle-icon">🔍</div>
+        <h3>Bot 2<br>RS Code Extractor</h3>
+        <p>Reads Google Sheet for new bookings, logs into the reservation site, extracts the RS number and mobile ticket URL, writes results back to Sheet.</p>
+        <div class="bundle-tag done">✅ Running</div>
+      </div>
+      <div class="bundle-item highlight fragment frag-pop" data-fragment-index="3">
+        <div class="bundle-icon">🚀</div>
+        <h3>Bot 3<br>BE2 System Updater</h3>
+        <p>Takes previous day's completed data from Google Sheet, logs into BE2 management system, increments inventory one-by-one, records each result.</p>
+        <div class="bundle-tag wip">🔨 Building Now</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 6 · BOT 1 DETAIL ═══════════════════════════════ -->
+  <section class="slide" id="slide-5"
+           role="region" aria-label="Slide 6"
+           data-index="5" data-bg="#009ba3" aria-hidden="true">
+    <div class="kkday-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+        <div class="header-divider"></div>
+        <span class="header-tagline">Bot 1 · Inventory Mining Bot</span>
+      </div>
+      <span class="header-right">Part 2 · Bot Details</span>
+    </div>
+
+    <div class="bot-detail">
+      <div class="bot-left fragment frag-pop" data-fragment-index="1">
+        <div class="bot-big-icon">🗃️</div>
+        <div style="font-size:28px;font-weight:800;color:#fff;">Inventory Mining</div>
+        <div class="bot-status-badge">✅ Live &amp; Running</div>
+        <div style="font-size:20px;color:rgba(255,255,255,0.6);text-align:center;line-height:1.6;">
+          GitHub Actions<br>
+          5 parallel instances<br>
+          Runs Mon + Daily
+        </div>
+      </div>
+      <div class="bot-right">
+        <div class="bot-step fragment frag-right" data-fragment-index="2">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <h4>Schedule Trigger (GitHub Actions)</h4>
+            <p>Runs automatically — Monday 11:58 PM for 3-week-ahead slots; daily for regular bookings. No human needed.</p>
+          </div>
+        </div>
+        <div class="bot-step fragment frag-right" data-fragment-index="3">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <h4>Playwright Opens Reservation Site</h4>
+            <p>5 browser instances run in parallel, each targeting different dates (Mipo / Cheongsapo departures).</p>
+          </div>
+        </div>
+        <div class="bot-step fragment frag-right" data-fragment-index="4">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <h4>Results Written to Google Sheets</h4>
+            <p>Booking reference, date, time slot, and product recorded automatically. Success rate tracked per run.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 7 · GITHUB ACTIONS SCHEDULE ══════════════════ -->
+  <section class="slide" id="slide-6"
+           role="region" aria-label="Slide 7"
+           data-index="6" data-bg="#006e74" aria-hidden="true">
+    <div class="kkday-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+        <div class="header-divider"></div>
+        <span class="header-tagline">Bot 1 · GitHub Actions Schedule</span>
+      </div>
+      <span class="header-right">Part 2 · How It Runs</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:36px;flex:1;">
+
+      <!-- Monday Night -->
+      <div style="background:rgba(254,230,0,0.1);border:2px solid rgba(254,230,0,0.5);border-radius:22px;padding:36px 40px;display:flex;flex-direction:column;gap:20px;" class="fragment" data-fragment-index="1">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px;">
+          <div style="font-size:44px;">🌙</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:4px;">Weekly · Monday Night</div>
+            <div style="font-size:30px;font-weight:900;color:#fee600;">16 Instances</div>
+          </div>
+        </div>
+        <div style="font-size:19px;color:rgba(255,255,255,0.7);margin-bottom:8px;">Books time slots 3 weeks ahead — large batch, multiple runners in parallel</div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="runner-row" style="background:rgba(0,0,0,0.2);">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:26px;">☁️</span>
+              <div>
+                <div style="font-size:19px;font-weight:700;color:#fff;">GitHub VM</div>
+                <div style="font-size:15px;color:rgba(255,255,255,0.55);">Cloud Runner</div>
+              </div>
+            </div>
+            <div class="stat-num-anim" data-count="5" style="font-size:28px;font-weight:900;color:#fff;">0</div>
+          </div>
+          <div class="runner-row" style="background:rgba(0,0,0,0.2);">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:26px;">💻</span>
+              <div>
+                <div style="font-size:19px;font-weight:700;color:#fff;">JC's Laptop</div>
+                <div style="font-size:15px;color:rgba(255,255,255,0.55);">Self-hosted Runner</div>
+              </div>
+            </div>
+            <div class="stat-num-anim" data-count="5" style="font-size:28px;font-weight:900;color:#fff;">0</div>
+          </div>
+          <div class="runner-row" style="background:rgba(0,0,0,0.2);">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:26px;">🇦🇺</span>
+              <div>
+                <div style="font-size:19px;font-weight:700;color:#fff;">Laptop in AU</div>
+                <div style="font-size:15px;color:rgba(255,255,255,0.55);">Self-hosted Runner</div>
+              </div>
+            </div>
+            <div class="stat-num-anim" data-count="3" style="font-size:28px;font-weight:900;color:#fff;">0</div>
+          </div>
+          <div class="runner-row" style="background:rgba(0,0,0,0.2);">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:26px;">🇰🇷</span>
+              <div>
+                <div style="font-size:19px;font-weight:700;color:#fff;">Laptop in KR</div>
+                <div style="font-size:15px;color:rgba(255,255,255,0.55);">Self-hosted Runner</div>
+              </div>
+            </div>
+            <div class="stat-num-anim" data-count="3" style="font-size:28px;font-weight:900;color:#fff;">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily -->
+      <div style="background:rgba(0,224,235,0.08);border:2px solid rgba(0,224,235,0.4);border-radius:22px;padding:36px 40px;display:flex;flex-direction:column;gap:20px;" class="fragment" data-fragment-index="2">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px;">
+          <div style="font-size:44px;">☀️</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:4px;">Every Day · Daily Mining</div>
+            <div style="font-size:30px;font-weight:900;color:#00e0eb;">14 Runs</div>
+          </div>
+        </div>
+        <div style="font-size:19px;color:rgba(255,255,255,0.7);margin-bottom:8px;">Mines available slots daily — triggered sequentially throughout the day</div>
+
+        <div style="background:rgba(0,0,0,0.2);border-radius:16px;padding:24px 24px;display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;align-items:center;gap:16px;">
+            <span style="font-size:40px;">🇰🇷</span>
+            <div>
+              <div style="font-size:22px;font-weight:900;color:#fff;">Laptop in KR</div>
+              <div style="font-size:16px;color:rgba(255,255,255,0.55);">Self-hosted Runner · all 14 daily runs</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+            <div style="background:rgba(0,224,235,0.2);border:1.5px solid rgba(0,224,235,0.4);border-radius:8px;padding:8px 14px;font-size:16px;font-weight:700;color:#00e0eb;">Run ×14 / day</div>
+            <div style="background:rgba(0,224,235,0.2);border:1.5px solid rgba(0,224,235,0.4);border-radius:8px;padding:8px 14px;font-size:16px;font-weight:700;color:#00e0eb;">Scheduled via cron</div>
+            <div style="background:rgba(0,224,235,0.2);border:1.5px solid rgba(0,224,235,0.4);border-radius:8px;padding:8px 14px;font-size:16px;font-weight:700;color:#00e0eb;">Auto-trigger</div>
+          </div>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.18);border-radius:14px;padding:20px 22px;margin-top:4px;">
+          <div style="font-size:17px;color:rgba(255,255,255,0.55);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Why KR?</div>
+          <div style="font-size:20px;color:rgba(255,255,255,0.8);line-height:1.6;">Korean IP avoids geo-blocks on the reservation site. Latency is lowest from within KR.</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:auto;">
+          <div style="background:rgba(0,0,0,0.2);border-radius:12px;padding:18px;text-align:center;">
+            <div class="stat-num-anim" data-count="114" style="font-size:36px;font-weight:900;color:#fff;">0</div>
+            <div style="font-size:16px;color:rgba(255,255,255,0.6);margin-top:4px;">Total runs / week<br>(16 Mon + 14×7 daily)</div>
+          </div>
+          <div style="background:rgba(0,0,0,0.2);border-radius:12px;padding:18px;text-align:center;">
+            <div style="font-size:36px;font-weight:900;color:#fee600;">0</div>
+            <div style="font-size:16px;color:rgba(255,255,255,0.6);margin-top:4px;">Manual actions<br>needed</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 8 · BOT 2 DETAIL ═══════════════════════════════ -->
+  <section class="slide" id="slide-7"
+           role="region" aria-label="Slide 8"
+           data-index="7" data-bg="#009ba3" aria-hidden="true">
+    <div class="kkday-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+        <div class="header-divider"></div>
+        <span class="header-tagline">Bot 2 · RS Code Extractor</span>
+      </div>
+      <span class="header-right">Part 2 · Bot Details</span>
+    </div>
+
+    <div class="bot-detail">
+      <div class="bot-left fragment frag-pop" data-fragment-index="1">
+        <div class="bot-big-icon">🔍</div>
+        <div style="font-size:28px;font-weight:800;color:#fff;">RS Code Extractor</div>
+        <div class="bot-status-badge">✅ Live &amp; Running</div>
+        <div style="font-size:20px;color:rgba(255,255,255,0.6);text-align:center;line-height:1.6;">
+          Daily · 4:00 AM KST<br>
+          Up to 3 retries/row<br>
+          Writes result to Sheet
+        </div>
+      </div>
+      <div class="bot-right">
+        <div class="bot-step fragment frag-right" data-fragment-index="2">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <h4>Read Google Sheet for "N/A" Rows</h4>
+            <p>Apps Script Web App exposes the sheet as an API. Bot fetches all rows where column E = N/A (RS number not yet collected).</p>
+          </div>
+        </div>
+        <div class="bot-step fragment frag-right" data-fragment-index="3">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <h4>Playwright Searches Reservation Site</h4>
+            <p>Logs in, searches by Booking Ref + Date, and extracts the RS number and mobile ticket URL (tket.me/…).</p>
+          </div>
+        </div>
+        <div class="bot-step fragment frag-right" data-fragment-index="4">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <h4>Write RS Number Back to Sheet</h4>
+            <p>Result: RS2600123… + mobile URL → column E. Errors marked NOT_FOUND or ERROR for easy visual review.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 9 · BOT 3 OVERVIEW ════════════════════════════ -->
+  <section class="slide" id="slide-8"
+           role="region" aria-label="Slide 9"
+           data-index="8" data-bg="#006e74" aria-hidden="true">
+    <div class="kkday-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+        <div class="header-divider"></div>
+        <span class="header-tagline">Bot 3 · BE2 System Updater</span>
+      </div>
+      <span class="header-right" style="color:#fee600;">🔨 Building Now</span>
+    </div>
+
+    <div class="bot-detail">
+      <div class="bot-left fragment frag-pop" data-fragment-index="1">
+        <div class="bot-big-icon">🚀</div>
+        <div style="font-size:28px;font-weight:800;color:#fff;">BE2 Updater</div>
+        <div class="bot-status-badge wip">🔨 In Development</div>
+        <div style="margin-top:16px;background:rgba(254,230,0,0.12);border:1.5px solid rgba(254,230,0,0.4);border-radius:16px;padding:24px 20px;text-align:left;">
+          <div style="font-size:18px;font-weight:700;color:#fee600;margin-bottom:12px;">🎯 Goal</div>
+          <div style="font-size:19px;color:rgba(255,255,255,0.8);line-height:1.6;">
+            Previous day's inventory data → BE2 system updated automatically, one item at a time, with full success log.
+          </div>
+        </div>
+      </div>
+      <div class="bot-right">
+        <div class="bot-step fragment frag-right" data-fragment-index="2">
+          <div class="step-num" style="background:#fee600;color:#1a1a1a;">1</div>
+          <div class="step-text">
+            <h4>Read Yesterday's Work from Google Sheet</h4>
+            <p>Bot reads all rows marked as "ready to update" — the previous day's confirmed inventory that needs to be pushed to BE2.</p>
+          </div>
+        </div>
+        <div class="bot-step fragment frag-right" data-fragment-index="3">
+          <div class="step-num" style="background:#fee600;color:#1a1a1a;">2</div>
+          <div class="step-text">
+            <h4>Login to BE2 &amp; Increment Inventory — One by One</h4>
+            <p>Safety first: each item is processed individually. If one fails, the rest continue. No bulk updates that are hard to roll back.</p>
+          </div>
+        </div>
+        <div class="bot-step fragment frag-right" data-fragment-index="4">
+          <div class="step-num" style="background:#fee600;color:#1a1a1a;">3</div>
+          <div class="step-text">
+            <h4>Record Success / Failure Back to Google Sheet</h4>
+            <p>Each row gets a clear ✅ SUCCESS or ❌ FAIL status. Team can spot-check visually without opening BE2.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 9 · BOT 3 FLOW DIAGRAM ════════════════════════ -->
+  <section class="slide" id="slide-9"
+           role="region" aria-label="Slide 10"
+           data-index="9" data-bg="#00b8c0" aria-hidden="true">
+    <div class="kkday-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+        <div class="header-divider"></div>
+        <span class="header-tagline">Bot 3 · Step-by-Step Flow</span>
+      </div>
+      <span class="header-right">Part 2 · Bot 3 Detail</span>
+    </div>
+
+    <div class="flow-wrap">
+      <div class="flow-step fragment frag-pop" data-fragment-index="1">
+        <div class="flow-step-num">1</div>
+        <div class="flow-box yellow">
+          <div class="flow-icon">📊</div>
+          <div class="flow-label">Google Sheet</div>
+          <div class="flow-desc">Previous day's inventory rows<br><em style="color:rgba(255,255,255,0.5)">Status = "Ready"</em></div>
+        </div>
+      </div>
+      <div class="flow-arrow fragment frag-pop" data-fragment-index="1"><span class="flow-arrow-inner">→</span></div>
+
+      <div class="flow-step fragment frag-pop" data-fragment-index="2">
+        <div class="flow-step-num">2</div>
+        <div class="flow-box teal">
+          <div class="flow-icon">📋</div>
+          <div class="flow-label">Read Rows</div>
+          <div class="flow-desc">Apps Script API<br>fetches pending items</div>
+        </div>
+      </div>
+      <div class="flow-arrow fragment frag-pop" data-fragment-index="2"><span class="flow-arrow-inner">→</span></div>
+
+      <div class="flow-step fragment frag-pop" data-fragment-index="3">
+        <div class="flow-step-num">3</div>
+        <div class="flow-box teal">
+          <div class="flow-icon">🔐</div>
+          <div class="flow-label">Login BE2</div>
+          <div class="flow-desc">Playwright opens<br>BE2 system securely</div>
+        </div>
+      </div>
+      <div class="flow-arrow fragment frag-pop" data-fragment-index="3"><span class="flow-arrow-inner">→</span></div>
+
+      <div class="flow-step fragment frag-pop" data-fragment-index="4">
+        <div class="flow-step-num">4</div>
+        <div class="flow-box teal">
+          <div class="flow-icon">➕</div>
+          <div class="flow-label">Increment<br>Inventory</div>
+          <div class="flow-desc">One item at a time<br>3 retries on failure</div>
+        </div>
+      </div>
+      <div class="flow-arrow fragment frag-pop" data-fragment-index="4"><span class="flow-arrow-inner">→</span></div>
+
+      <div class="flow-step fragment frag-pop" data-fragment-index="5">
+        <div class="flow-step-num">5</div>
+        <div class="flow-box green">
+          <div class="flow-icon">✅</div>
+          <div class="flow-label">Record Result</div>
+          <div class="flow-desc">SUCCESS / FAIL<br>written back to Sheet</div>
+        </div>
+      </div>
+      <div class="flow-arrow fragment frag-pop" data-fragment-index="5"><span class="flow-arrow-inner">→</span></div>
+
+      <div class="flow-step fragment frag-pop" data-fragment-index="6">
+        <div class="flow-step-num">6</div>
+        <div class="flow-box yellow">
+          <div class="flow-icon">👀</div>
+          <div class="flow-label">Team Review</div>
+          <div class="flow-desc">Visual check<br>in Google Sheets</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:28px;text-align:center;font-size:22px;color:rgba(255,255,255,0.65);">
+      ⚠️ Key Design Rule: <strong style="color:#fee600;">process one row at a time</strong> — if anything goes wrong, we know exactly where to restart.
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 10 · DESIGN PRINCIPLE ════════════════════════ -->
+  <section class="slide layout-bundle" id="slide-10"
+           role="region" aria-label="Slide 11"
+           data-index="10" data-bg="#009ba3" aria-hidden="true">
+    <div class="kkday-header">
+      <div style="display:flex;align-items:center;gap:20px;">
+        <img class="kkday-logo-img size-sm" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+        <div class="header-divider"></div>
+        <span class="header-tagline">Vibe Coding Best Practices</span>
+      </div>
+      <span class="header-right">Part 3 · How We Build</span>
+    </div>
+
+    <div class="bundle-grid">
+      <div class="bundle-item fragment frag-pop" data-fragment-index="1">
+        <div class="bundle-icon">✂️</div>
+        <h3>Split Processes</h3>
+        <p>Divide complex automation into small, single-purpose bots. Each one does one thing well. Easier to test, easier to fix when something breaks.</p>
+        <div class="bundle-tag">Less risk · More control</div>
+      </div>
+      <div class="bundle-item fragment frag-pop" data-fragment-index="2">
+        <div class="bundle-icon">📝</div>
+        <h3>Log Everything</h3>
+        <p>Every action writes a result to Google Sheets. The team doesn't need to understand the code — just read the sheet to know what happened.</p>
+        <div class="bundle-tag">Transparent · Reviewable</div>
+      </div>
+      <div class="bundle-item highlight fragment frag-pop" data-fragment-index="3">
+        <div class="bundle-icon">🔁</div>
+        <h3>One at a Time</h3>
+        <p>Never update in bulk. Process each inventory item individually so failures are isolated. A partial success is better than a total mystery.</p>
+        <div class="bundle-tag wip">Golden Rule</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SLIDE 11 · END ════════════════════════════════════════ -->
+  <section class="slide layout-end" id="slide-11"
+           role="region" aria-label="Slide 12"
+           data-index="11" data-bg="#00c2cb" aria-hidden="true">
+    <div style="position:absolute;top:48px;left:88px;">
+      <img class="kkday-logo-img size-xl" src="KKday_Logo_WhiteOnTransparent.png" alt="KKday">
+    </div>
+    <div class="tagline">
+      Build it once → let it run forever.<br>
+      The kitchen is ready — now let's cook.
+    </div>
+    <div class="end-grid">
+      <div class="end-pill accent">Bot 1 ✅ Running</div>
+      <div class="end-pill accent">Bot 2 ✅ Running</div>
+      <div class="end-pill" style="border-color:#fee600;color:#fee600;">Bot 3 🔨 In Progress</div>
+    </div>
+    <div style="font-size:26px;color:rgba(255,255,255,0.7);margin-bottom:36px;">
+      Tools: VS Code · Node.js · Playwright · Google Sheets · GitHub Actions
+    </div>
+    <button class="restart-btn" onclick="presentation.goTo(0,'backward')">↺ Start Over</button>
+  </section>
+
+  </div><!-- #frame -->
+ </div><!-- #viewport -->
+</main>
+
+<script>
+/* ── Generic rAF count-up (kept for [data-count] on enter) ── */
+function countUp(el, duration=1100, delay=0) {
+  const raw = el.dataset.count;
+  if (raw === undefined || isNaN(parseInt(raw))) return;
+  const target = parseInt(raw), suffix = el.dataset.suffix || '';
+  setTimeout(()=>{
+    const start = performance.now();
+    (function tick(now) {
+      const p = Math.min((now-start)/duration,1), ease = 1-Math.pow(1-p,3);
+      el.textContent = Math.round(ease*target)+suffix;
+      el.style.color = '#fff';
+      if (p<1) requestAnimationFrame(tick);
+    })(start);
+  }, delay);
+}
+
+/* ── Step-based count-up: +1 every intervalMs ───────────── */
+function countUpStep(el, intervalMs, delay=0, emphasisScale=1.5) {
+  const target = parseInt(el.dataset.count);
+  if (isNaN(target)) return;
+  const suffix = el.dataset.suffix || '';
+  // Start hidden at 0
+  el.textContent = '0' + suffix;
+  el.style.color = '#fff';
+  el.style.opacity = '0';
+  el.style.transform = 'scale(0.6)';
+  el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+  setTimeout(()=>{
+    // Fade in number
+    el.style.opacity = '1';
+    el.style.transform = 'scale(1)';
+    let cur = 0;
+    const timer = setInterval(()=>{
+      cur = Math.min(cur + 1, target);
+      el.textContent = cur + suffix;
+      el.style.color = '#fff';
+      if (cur >= target) {
+        clearInterval(timer);
+        // Big emphasis pop at the end
+        el.style.transition = 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1), color 0.15s';
+        el.style.transform = `scale(${emphasisScale})`;
+        el.style.color = '#fee600';
+        setTimeout(()=>{
+          el.style.transform = 'scale(1)';
+          el.style.color = '#fff';
+          setTimeout(()=>{ el.style.transition=''; }, 300);
+        }, 300);
+      }
+    }, intervalMs);
+  }, delay);
+}
+
+/* ── Flash highlight on a number element ─────────────── */
+function numFlash(el) {
+  el.style.color = '#fff';
+  el.style.animation = 'none';
+  el.offsetHeight; // reflow
+  el.style.animation = 'numFlash 0.7s ease';
+  setTimeout(()=>{ el.style.animation=''; el.style.color='#fff'; }, 750);
+}
+
+/* ── Title slide: floating particles ─────────────────── */
+function spawnParticles(slide) {
+  if (slide.querySelector('.particle')) return; // already spawned
+  const colors = ['rgba(255,255,255,0.15)','rgba(254,230,0,0.2)','rgba(0,224,235,0.15)'];
+  for (let i=0; i<18; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 8 + Math.random()*40;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      top:${60 + Math.random()*50}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation: floatParticle ${6+Math.random()*8}s linear ${Math.random()*4}s infinite;
+    `;
+    slide.appendChild(p);
+  }
+}
+
+/* ── Stagger list items inside a card ─────────────────── */
+function staggerList(slide, selector, baseDelay=300, step=120) {
+  slide.querySelectorAll(selector).forEach((li,i)=>{
+    li.style.opacity='0';
+    li.style.transform='translateX(-16px)';
+    li.style.transition=`opacity 0.4s ease, transform 0.4s ease`;
+    setTimeout(()=>{
+      li.style.opacity='1';
+      li.style.transform='translateX(0)';
+    }, baseDelay + i*step);
+  });
+}
+
+/* ── 114: +1 every 100ms ─────────────────────────────────── */
+function animateStats(slide, delay=400) {
+  slide.querySelectorAll('.stat-num-anim').forEach((el,i)=>{
+    if (!el.closest('.runner-row')) {
+      countUpStep(el, 100, delay + i*200, 1.4);
+    }
+  });
+}
+
+/* ── Runner rows: slide in → number fades in → counts +1/sec ── */
+function animateRunnerRows(slide, delay=300) {
+  // First hide all numbers immediately
+  slide.querySelectorAll('.runner-row .stat-num-anim').forEach(el=>{
+    el.textContent = '0';
+    el.style.opacity = '0';
+    el.style.color = '#fff';
+  });
+
+  slide.querySelectorAll('.runner-row').forEach((row,i)=>{
+    row.style.opacity='0';
+    row.style.transform='translateX(-30px)';
+    row.style.transition=`opacity 0.45s ease, transform 0.45s ease`;
+    const rowDelay = delay + i*700; // stagger rows by 700ms so each finishes before next starts
+    setTimeout(()=>{
+      row.style.opacity='1';
+      row.style.transform='translateX(0)';
+      const numEl = row.querySelector('.stat-num-anim');
+      if (numEl) countUpStep(numEl, 1000, 400); // +1 per second, starts 400ms after row appears
+    }, rowDelay);
+  });
+}
+
+/* ── Per-slide on-enter hooks ──────────────────────────── */
+function onSlideEnter(index, slide) {
+  if (index === 0) {  // Title
+    spawnParticles(slide);
+  }
+  if (index === 1) {  // AI vs Vibe — stagger list items after cards appear
+    staggerList(slide, '.analogy-box.order .analogy-list li', 450, 130);
+    setTimeout(()=>{
+      staggerList(slide, '.analogy-box.build .analogy-list li', 0, 130);
+    }, 650);
+  }
+  if (index === 6) {  // GitHub Actions schedule
+    animateRunnerRows(slide, 500);
+    animateStats(slide, 1200);
+  }
+}
+
+class Presentation {
+  constructor() {
+    this.slides=[...document.querySelectorAll('.slide')];
+    this.total=this.slides.length;
+    this.current=0; this.isAnimating=false;
+    document.getElementById('tot').textContent=this.total;
+    this.init();
+  }
+  init() {
+    this.applyScale();
+    new ResizeObserver(()=>this.applyScale()).observe(document.getElementById('viewport'));
+    const init=Math.min(Math.max(parseInt(location.hash.slice(1))||0,0),this.total-1);
+    this.goTo(init,'none');
+    this.bindKeyboard(); this.bindPointer();
+    document.getElementById('btn-prev').addEventListener('click',()=>this.prev());
+    document.getElementById('btn-next').addEventListener('click',()=>this.next());
+    window.addEventListener('hashchange',()=>{ const i=parseInt(location.hash.slice(1))||0; if(i!==this.current) this.goTo(i,'none'); });
+  }
+  applyScale() {
+    const vw=window.innerWidth, vh=window.innerHeight;
+    const scale=Math.min(vw/1920,vh/1080);
+    const tx=(vw-1920*scale)/2, ty=(vh-1080*scale)/2;
+    document.getElementById('frame').style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
+  }
+  goTo(index,dir='forward') {
+    if (index<0||index>=this.total) return;
+    if (this.isAnimating&&dir!=='none') return;
+    if (index===this.current&&dir!=='none') return;
+    this.isAnimating=true;
+    const prev=this.slides[this.current], next=this.slides[index];
+    prev.setAttribute('aria-hidden','true'); prev.classList.remove('present'); prev.classList.add(dir==='backward'?'future':'past');
+    next.removeAttribute('aria-hidden'); next.classList.remove('past','future'); next.classList.add('present');
+    next.querySelectorAll('[data-count]').forEach(n=>countUp(n));
+    this.current=index; this.updateUI();
+    if (dir !== 'none') onSlideEnter(index, next);
+    document.getElementById('slide-bg').style.backgroundColor=this.slides[index].dataset.bg||'#00c2cb';
+    const unlock=()=>{this.isAnimating=false;};
+    if (dir==='none'){unlock();return;}
+    const t=setTimeout(unlock,750);
+    next.addEventListener('transitionend',e=>{if(e.propertyName==='transform'){clearTimeout(t);unlock();}},{once:true});
+    next.addEventListener('transitioncancel',()=>{clearTimeout(t);unlock();},{once:true});
+  }
+  next(){this.goTo(this.current+1,'forward');}
+  prev(){this.goTo(this.current-1,'backward');}
+  updateUI() {
+    document.getElementById('cur').textContent=this.current+1;
+    document.getElementById('progress-fill').style.transform=`scaleX(${(this.current+1)/this.total})`;
+    document.getElementById('sr-status').textContent=`Slide ${this.current+1} of ${this.total}`;
+    history.replaceState(null,'',`#${this.current}`);
+  }
+  bindKeyboard() {
+    document.addEventListener('keydown',e=>{
+      const a=document.activeElement;
+      if (a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable) return;
+      if (e.ctrlKey||e.altKey||e.metaKey) return;
+      switch(e.key) {
+        case 'ArrowRight':case 'ArrowDown':case ' ':case 'PageDown':case 'Enter': e.preventDefault();this.next();break;
+        case 'ArrowLeft':case 'ArrowUp':case 'PageUp': e.preventDefault();this.prev();break;
+        case 'Home': e.preventDefault();this.goTo(0,'backward');break;
+        case 'End':  e.preventDefault();this.goTo(this.total-1,'forward');break;
+        case 'f':case 'F': toggleFullscreen();break;
+        case 'p':case 'P': exportPDF();break;
+        case 'x':case 'X': exportPPTX();break;
+        case 't':case 'T': document.body.classList.toggle('show-toolbar');break;
+      }
+    });
+  }
+  bindPointer() {
+    const el=document.getElementById('presentation');
+    let sx=0,sy=0,st=0;
+    el.style.touchAction='none';
+    el.addEventListener('pointerdown',e=>{if(!e.isPrimary)return;sx=e.clientX;sy=e.clientY;st=Date.now();el.setPointerCapture(e.pointerId);});
+    el.addEventListener('pointerup',e=>{
+      if(!e.isPrimary)return;
+      const dx=sx-e.clientX,dy=sy-e.clientY,vel=Math.abs(dx)/Math.max(Date.now()-st,1);
+      if(Math.abs(dx)>Math.abs(dy)&&(Math.abs(dx)>60||vel>0.25)) dx>0?this.next():this.prev();
+      el.releasePointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointercancel',e=>el.releasePointerCapture(e.pointerId));
+  }
+}
+
+function toggleFullscreen(){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.();}
+
+function exportPDF(){
+  document.querySelectorAll('.slide').forEach(s=>{s.style.backgroundColor=s.dataset.bg||'#00c2cb';});
+  window.print();
+  setTimeout(()=>{document.querySelectorAll('.slide').forEach(s=>{s.style.backgroundColor='';});},1000);
+}
+
+function loadScript(src){return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});}
+
+async function exportPPTX(){
+  const btn=document.getElementById('btn-pptx'),orig=btn.textContent;
+  btn.disabled=true;
+  try {
+    if(!window.html2canvas) await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+    if(!window.PptxGenJS)   await loadScript('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js');
+    const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE';
+    const frame=document.getElementById('frame'),viewport=document.getElementById('viewport');
+    const savedCurrent=presentation.current;
+    const uiEls=document.querySelectorAll('#progress,#counter,#help-hint,.nav-btn,#export-toolbar');
+    uiEls.forEach(el=>{el._sd=el.style.display;el.style.display='none';});
+    frame.style.transition='none'; frame.style.transform='scale(1)';
+    frame.style.top='0'; frame.style.left='0'; viewport.style.overflow='visible';
+    for(let i=0;i<presentation.total;i++){
+      btn.textContent=`⏳ ${i+1}/${presentation.total}`;
+      presentation.goTo(i,'none');
+      frame.querySelectorAll('.fragment').forEach(el=>{el.style.opacity='1';el.style.transform='translateY(0)';el.style.animation='none';});
+      const slideBg=presentation.slides[i].dataset.bg||'#00c2cb';
+      presentation.slides[i].style.backgroundColor=slideBg;
+      await new Promise(r=>setTimeout(r,200));
+      const canvas=await html2canvas(frame,{width:1920,height:1080,scale:1,useCORS:true,allowTaint:true,logging:false,backgroundColor:slideBg,x:0,y:0,scrollX:0,scrollY:0,windowWidth:1920,windowHeight:1080});
+      frame.querySelectorAll('.fragment').forEach(el=>{el.style.opacity='';el.style.transform='';el.style.animation='';});
+      presentation.slides[i].style.backgroundColor='';
+      const imgData=canvas.toDataURL('image/png');
+      const slide=pptx.addSlide();
+      slide.addImage({data:imgData,x:0,y:0,w:'100%',h:'100%'});
+    }
+    uiEls.forEach(el=>{el.style.display=el._sd||'';});
+    frame.style.transition=''; viewport.style.overflow='hidden';
+    presentation.applyScale(); presentation.goTo(savedCurrent,'none');
+    await pptx.writeFile({fileName:'vibe-coding-automation.pptx'});
+  } catch(err){
+    console.error(err);
+    alert('PPTX export failed: '+err.message);
+  } finally { btn.textContent=orig; btn.disabled=false; }
+}
+
+const presentation = new Presentation();
+</script>
+</body>
+</html>
